@@ -17,7 +17,7 @@
  */
 void Interpreter::raiseParseError()
 {
-	std::cout << "Error parsing input" << std::endl;
+	std::cout << "Invalid syntax" << std::endl;
 	assert(true);
 }
 
@@ -74,41 +74,20 @@ void Interpreter::eat(const TokenType &tokType)
  */
 int Interpreter::expr()
 {
-	//set current token to the first token taken from the input
 	currentToken_ = getNextToken();
+	int result = atoi(term().c_str());
 
-	//we expect the current token to be a single-digit integer
-	Token left = currentToken_;
-	eat(T_INTEGER);
-
-	//we expect the current token to be either '+' or '-'
-	Token op = currentToken_;
-	if (op.type() == T_PLUS) {
-		eat(T_PLUS);
-	} else {
-		eat(T_MINUS);
+	while (currentToken_.isOperator()) {
+		Token tok = currentToken_;
+		if (tok.type() == T_PLUS) {
+			eat(T_PLUS);
+			result = result + atoi(term().c_str());
+		} else if (tok.type() == T_MINUS) {
+			eat(T_MINUS);
+			result = result - atoi(term().c_str());
+		}
 	}
-
-	//we expect the current token to be a single-digit integer
-	Token right = currentToken_;
-	eat(T_INTEGER);
-
-	//after the above call the currentToken is set to EOF token
-	
-	/*
-	 * at this point either T_INTEGER T_PLUS T_INTEGER or
-	 * T_INTEGER T_MINUS T_INTEGER sequence of tokens
-	 * has been succesfully found and the method can just
-	 * return the result of adding or subtracting two integers, thus 
-	 * effectively interpreting client input
-	 */
-	if (op.type() == T_PLUS) {
-		return atoi(left.value().c_str()) + atoi(right.value().c_str());
-	} else {
-		return atoi(left.value().c_str()) - atoi(right.value().c_str());
-	}
-	raiseParseError();
-	return 0;
+	return result;
 }
 
 /*!
@@ -151,7 +130,24 @@ std::string Interpreter::integer()
 	return result;
 }
 
+/*!
+ * fn void Interpeter::term()
+ * \return An integer token value
+ */
+std::string Interpreter::term()
+{
+	Token tok = currentToken_;
+	eat(T_INTEGER);
+	return tok.value();
+}
 
+/*!
+ * fn void Interpeter::factor()
+ */
+void Interpreter::factor()
+{
+	eat(T_INTEGER);
+}
 
 
 

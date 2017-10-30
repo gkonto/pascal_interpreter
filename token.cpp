@@ -56,6 +56,23 @@ std::string Token::representation()
 	return msg;
 }
 
+/*!
+ *  \brief Checks if Token is operator
+ *  \return True if token is operator
+ */
+bool Token::isOperator()
+{
+	switch (this->type())
+	{
+		case T_PLUS:
+		case T_MINUS:
+			return true;
+		default:
+			return false;
+	}
+	return false;
+}
+
 static void start()
 {
 	std::cout << "> ";

@@ -25,6 +25,7 @@ class Token
 		std::string representation();
 		TokenType type() { return type_; }
 		std::string value() { return value_; }
+		bool isOperator();
 
 	private:
 		std::string getTokenTypeLabel();

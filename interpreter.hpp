@@ -10,6 +10,8 @@ class Interpreter
 		void eat(const TokenType &toktype);
 		int  expr();
 		void advance();
+		void factor();
+		std::string term();
 		void skipWhiteSpace();
 		std::string  integer();
 
