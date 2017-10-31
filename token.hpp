@@ -7,12 +7,14 @@
  */
 enum TokenType
 {
-	T_INTEGER, /*!< The Token type_ is an integer */
-	T_PLUS,    /*!< The Token type_ is a plus operator + */
-	T_MINUS,   /*!< The Token type_ is a minus operator - */
+	T_INTEGER, /*!< The Token type_ is an integer            */
+	T_PLUS,    /*!< The Token type_ is a plus operator +     */
+	T_MINUS,   /*!< The Token type_ is a minus operator -    */
 	T_DIV,     /*!< The Token type_ is a division operator - */
-	T_MUL,     /*!< The Token type_ is a multi operator - */
-	T_EOF,     /*!< The Token type_ is EOF */
+	T_MUL,     /*!< The Token type_ is a multi operator -    */
+	T_EOF,     /*!< The Token type_ is EOF                   */
+	T_LPAREN,  /*!< The Token type_ is Left Parenthesis (    */
+	T_RPAREN,  /*!< The Token type_ is Right Parenthesis )   */
 
 	T_MAX
 };

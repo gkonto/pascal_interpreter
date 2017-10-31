@@ -187,6 +187,14 @@ Token Lexer::getNextToken()
 			advance();
 			return Token(T_DIV, "/");
 		}
+		if (currentChar_ == '(') {
+			advance();
+			return Token(T_LPAREN, "(");
+		}
+		if (currentChar_ == ')') {
+			advance();
+			return Token(T_RPAREN, ")");
+		}
 		raiseError();
 	}
 	return Token(T_EOF, "");
@@ -206,8 +214,8 @@ static void start()
 		}
 		Lexer lex(expr);
 		Interpreter interp(lex);
-		int result = interp.expr();
-		std::cout << result << std::endl;
+		Node *node = interp.expr();
+/*		std::cout << result << std::endl;*/
 		std::cout << "> ";
 	}
 }

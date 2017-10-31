@@ -21,7 +21,6 @@ void Interpreter::raiseError()
 	assert(true);
 }
 
-
 /*!
  * fn void Interpreter::eat()
  * \brief Compare the current token type with the passed token
@@ -47,33 +46,40 @@ void Interpreter::eat(const TokenType &tokType)
  * term   : factor(( MUL | DIV) factor)*
  * factor : INTEGER
  */
-int Interpreter::expr()
+Node *Interpreter::expr()
 {
-	int result = term();
+	Node *node = term();
 
 	while (currentToken_.isOperatorFirstPrecedence()) {
 		Token tok = currentToken_;
 		if (tok.type() == T_PLUS) {
 			eat(T_PLUS);
-			result = result + term();
 		} else if (tok.type() == T_MINUS) {
 			eat(T_MINUS);
-			result = result - term();
 		}
+		node = new BinOp(node, tok, term());
 	}
-	return result;
+	return node;
 }
 
 /*!
  * fn void Interpeter::factor()
- * \brief factor : INTEGER
+ * \brief factor : INTEGER | LPAREN expr RPAREN
  * \return An T_INTEGER token value
  */
-std::string Interpreter::factor()
+Node *Interpreter::factor()
 {
 	Token tok = currentToken_;
-	eat(T_INTEGER);
-	return tok.value();
+	if (tok.type() == T_INTEGER) {
+		eat(T_INTEGER);
+		return new Number(tok);
+	} else if (tok.type() == T_LPAREN) {
+		eat(T_LPAREN);
+		Node *node = expr();
+		eat(T_RPAREN);
+		return node;
+	}
+	return NULL;
 }
 
 /*!
@@ -81,21 +87,20 @@ std::string Interpreter::factor()
  * \brief term : factor((MUL | DIV) factor)*
  * \return An T_INTEGER token value
  */
-int Interpreter::term()
+Node *Interpreter::term()
 {
-	int result = atoi(factor().c_str());
+	Node *node = factor();
 
 	while (currentToken_.isOperatorSecondPrecedence()) {
 		Token tok = currentToken_;
 		if (tok.type() == T_MUL) {
 			eat(T_MUL);
-			result = result * atoi(factor().c_str());
 		} else if (tok.type() == T_DIV) {
 			eat(T_DIV);
-			result = result / atoi(factor().c_str());
 		}
+		node = new BinOp(node, tok, factor());
 	}
-	return result;
+	return node;
 }
 
 
