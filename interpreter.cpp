@@ -15,41 +15,12 @@
  * fn void Interpreter::raiseParseError()
  * \brief Raise assertion when error occurs while parsing
  */
-void Interpreter::raiseParseError()
+void Interpreter::raiseError()
 {
 	std::cout << "Invalid syntax" << std::endl;
 	assert(true);
 }
 
-/*!
- * fn void Interpreter::getNextToken()
- * \brief Lexical analyzer (also known as scanner or tokenizer)
- * This method is responsible for breaking a sentence apart into tokens.
- * One token at a time.
- *
- * \return a Token
- */
-Token Interpreter::getNextToken()
-{
-	while (currentChar_ != '\0') {
-		if (isspace(currentChar_)) {
-			skipWhiteSpace();
-		}
-		if (isdigit(currentChar_)) {
-			return Token(T_INTEGER, integer());
-		}
-		if (currentChar_ == '+') {
-			advance();
-			return Token(T_PLUS, "+");
-		}
-		if (currentChar_ == '-') {
-			advance();
-			return Token(T_MINUS, "-");
-		}
-		raiseParseError();
-	}
-	return Token(T_EOF, "");
-}
 
 /*!
  * fn void Interpreter::eat()
@@ -61,80 +32,44 @@ Token Interpreter::getNextToken()
 void Interpreter::eat(const TokenType &tokType)
 {
 	if (currentToken_.type() == tokType) {
-		currentToken_ = getNextToken();
+/*		std::cout << "Eat after: " << lexer_.getNextToken().representation() << std::endl;*/
+		currentToken_ = lexer_.getNextToken();
+/*		std::cout << "Eat after: " << currentToken_.representation() << std::endl;*/
 	} else {
-		raiseParseError();
+		raiseError();
 	}
 }
 
 /*!
  * fn void Interpeter::expr()
- * \brief Parser / Interpreter 
- * expr -> T_INTEGER PLUS T_INTEGER
+ * \brief  Arithmetic expression parser / interpreter
+ * expr   : term((PLUS | MINUS) term)*
+ * term   : factor(( MUL | DIV) factor)*
+ * factor : INTEGER
  */
 int Interpreter::expr()
 {
-	currentToken_ = getNextToken();
-	int result = atoi(term().c_str());
+	int result = term();
 
-	while (currentToken_.isOperator()) {
+	while (currentToken_.isOperatorFirstPrecedence()) {
 		Token tok = currentToken_;
 		if (tok.type() == T_PLUS) {
 			eat(T_PLUS);
-			result = result + atoi(term().c_str());
+			result = result + term();
 		} else if (tok.type() == T_MINUS) {
 			eat(T_MINUS);
-			result = result - atoi(term().c_str());
+			result = result - term();
 		}
 	}
 	return result;
 }
 
 /*!
- * fn void Interpeter::advance()
- * \brief Advance the pos_ pointer and set the currentChar variable
+ * fn void Interpeter::factor()
+ * \brief factor : INTEGER
+ * \return An T_INTEGER token value
  */
-void Interpreter::advance()
-{
-	pos_++;
-	if (pos_ > text_.length() - 1) {
-		currentChar_ = '\0'; // indicates EOF
-	} else {
-		currentChar_ = text_[pos_];
-	}
-
-}
-
-/*!
- * fn void Interpeter::skipWhiteSpace()
- */
-void Interpreter::skipWhiteSpace()
-{
-	while (currentChar_ != '\0' && isspace(currentChar_)) {
-		advance();
-	}
-}
-
-/*!
- * fn void Interpeter::integer()
- * \brief Return a multidigit integer consumed from the input.
- * \return The integer in string format
- */
-std::string Interpreter::integer()
-{
-	std::string result = "";
-	while (currentChar_ != '\0' && isdigit(currentChar_)) {
-		result += currentChar_;
-		advance();
-	}
-	return result;
-}
-
-/*!
- * fn void Interpeter::term()
- * \return An integer token value
- */
-std::string Interpreter::term()
+std::string Interpreter::factor()
 {
 	Token tok = currentToken_;
 	eat(T_INTEGER);
@@ -142,11 +77,25 @@ std::string Interpreter::term()
 }
 
 /*!
- * fn void Interpeter::factor()
+ * fn void Interpeter::term()
+ * \brief term : factor((MUL | DIV) factor)*
+ * \return An T_INTEGER token value
  */
-void Interpreter::factor()
+int Interpreter::term()
 {
-	eat(T_INTEGER);
+	int result = atoi(factor().c_str());
+
+	while (currentToken_.isOperatorSecondPrecedence()) {
+		Token tok = currentToken_;
+		if (tok.type() == T_MUL) {
+			eat(T_MUL);
+			result = result * atoi(factor().c_str());
+		} else if (tok.type() == T_DIV) {
+			eat(T_DIV);
+			result = result / atoi(factor().c_str());
+		}
+	}
+	return result;
 }
 
 

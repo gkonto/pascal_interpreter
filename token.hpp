@@ -10,6 +10,8 @@ enum TokenType
 	T_INTEGER, /*!< The Token type_ is an integer */
 	T_PLUS,    /*!< The Token type_ is a plus operator + */
 	T_MINUS,   /*!< The Token type_ is a minus operator - */
+	T_DIV,     /*!< The Token type_ is a division operator - */
+	T_MUL,     /*!< The Token type_ is a multi operator - */
 	T_EOF,     /*!< The Token type_ is EOF */
 
 	T_MAX
@@ -26,7 +28,8 @@ class Token
 		TokenType type() { return type_; }
 		std::string value() { return value_; }
 		bool isOperator();
-
+		bool isOperatorFirstPrecedence();
+		bool isOperatorSecondPrecedence();
 	private:
 		std::string getTokenTypeLabel();
 		void raiseLabelError();
@@ -34,4 +37,34 @@ class Token
 		TokenType type_;
 		std::string value_;
 };
+
+
+class Lexer
+{
+	public:
+		Lexer(std::string text) : text_(text), pos_(0), currentChar_(text_[pos_])
+		{}
+		void advance();
+		void skipWhiteSpace();
+		std::string integer();
+		Token getNextToken();
+
+	private:
+		void raiseError();
+		std::string text_;
+		size_t pos_;
+		char currentChar_;
+
+};
+
+
+
+
+
+
+
+
+
+
+
 

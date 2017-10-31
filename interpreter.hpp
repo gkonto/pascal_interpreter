@@ -5,22 +5,13 @@ class Interpreter
 {
 	public:
 		///Creates an Interpreter object
-		Interpreter(std::string text) : text_(text), pos_(0), currentToken_(Token()), currentChar_(text_[pos_]) {}
-		Token getNextToken();
+		Interpreter(Lexer lexer) : lexer_(lexer), currentToken_(lexer_.getNextToken()) {}
 		void eat(const TokenType &toktype);
 		int  expr();
-		void advance();
-		void factor();
-		std::string term();
-		void skipWhiteSpace();
-		std::string  integer();
-
+		int  term();
+		std::string factor();
 	private:
-		void raiseParseError();
-
-		std::string text_;
-		size_t      pos_;
-		Token       currentToken_;
-		char        currentChar_;
-
+		void raiseError();
+		Lexer lexer_;
+		Token currentToken_;
 };
