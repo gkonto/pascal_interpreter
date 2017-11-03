@@ -6,11 +6,13 @@ cmake_policy(SET CMP0000 OLD)
 
 
 set(HEADERS
+   clog.hpp
    token.hpp
    interpreter.hpp
    )
 
 set(SOURCES 
+    clog.cpp
     token.cpp
     interpreter.cpp
     )

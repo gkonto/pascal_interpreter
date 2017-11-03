@@ -1,4 +1,6 @@
 #pragma once
+#ifndef TOKEN_HPP
+#define TOKEN_HPP
 
 /*!
  *  \file token.hpp
@@ -59,6 +61,7 @@ class Lexer
 
 };
 
+#endif
 
 
 

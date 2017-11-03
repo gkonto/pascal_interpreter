@@ -1,5 +1,8 @@
 #pragma once
+#ifndef INTERPRETER_HPP
+#define INTERPRETER_HPP
 #include "token.hpp"
+#include "clog.hpp"
 
 
 class Node
@@ -7,6 +10,10 @@ class Node
 	public:
 		Token getToken() { return token_; }
 		void  setToken(Token tok) { token_ = tok; }
+		virtual Node *getRhs() { return NULL; }
+		virtual Node *getLhs() { return NULL; }
+		virtual int  visit()   { CLog::write(CLog::DEBUG, "virtual visit() should not reach!\n"); return 0; }
+		virtual int  value()   { return 0; }
 	private:
 		Token token_;
 };
@@ -18,6 +25,9 @@ class BinOp : public Node
        		{
 		       	setToken(op);
 		}
+		int visit();
+		Node *getRhs() { return rhs_; }
+		Node *getLhs() { return lhs_; }
 	private:
 		Node *lhs_;
 		Token op_;
@@ -27,20 +37,22 @@ class BinOp : public Node
 class Number : public Node
 {
 	public:
-		Number(Token tok) : value_(getToken().value())
+		Number(Token tok)
        		{
 			setToken(tok);
 		}
+		int visit();
+		int value() { return atoi(getToken().value().c_str()); }
 	private:
-		std::string value_;
 };
 
-class Interpreter
+class Parser
 {
 	public:
-		///Creates an Interpreter object
-		Interpreter(Lexer lexer) : lexer_(lexer), currentToken_(lexer_.getNextToken()) {}
+		///Creates an Parser object
+		Parser(Lexer lexer) : lexer_(lexer), currentToken_(lexer_.getNextToken()) {}
 		void eat(const TokenType &toktype);
+		Node *parse() { return expr(); }
 		Node *expr();
 		Node *term();
 		Node *factor();
@@ -49,3 +61,23 @@ class Interpreter
 		Lexer lexer_;
 		Token currentToken_;
 };
+
+class NodeVisitor
+{
+	public:
+		int visit(Node *node);//FIXME
+/*		generic_visit(Node *node)://FIXME*/
+
+	private:
+};
+
+class Interpreter : public NodeVisitor
+{
+	public:
+		Interpreter(Parser parser) : parser_(parser) {}
+		int interpret();
+	private:
+		Parser parser_;
+};
+
+#endif

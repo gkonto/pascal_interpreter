@@ -2,9 +2,12 @@
 #include <sstream>
 #include <cassert>
 
+#include "clog.hpp"
 #include "interpreter.hpp"
 #include "token.hpp"
 
+bool CLog::m_bInitialised = true;
+int CLog::m_nLevel = CLog::RELEASE ;
 /*!
  *  \file token.cpp
  */
@@ -33,6 +36,8 @@ std::string Token::getTokenTypeLabel()
 		case T_INTEGER: return "T_INTEGER";
 		case T_PLUS   : return "T_PLUS";
 		case T_MINUS  : return "T_MINUS";
+		case T_MUL    : return "T_MUL";
+		case T_DIV    : return "T_DIV";
 		case T_EOF    : return "T_EOF";
 		case T_MAX    : return "T_MAX";
 		default:
@@ -205,7 +210,8 @@ Token Lexer::getNextToken()
 
 static void start()
 {
-	std::cout << "> ";
+/*	std::cout << "> ";*/
+	CLog::write(CLog::RELEASE, "> ");
 	std::string expr;
 
 	while (getline(std::cin, expr)) {
@@ -213,10 +219,11 @@ static void start()
 			continue;
 		}
 		Lexer lex(expr);
-		Interpreter interp(lex);
-		Node *node = interp.expr();
-/*		std::cout << result << std::endl;*/
-		std::cout << "> ";
+		Parser parser(lex);
+		Interpreter interpreter(parser);
+		int result = interpreter.interpret();
+		std::cout << result << std::endl;
+		CLog::write(CLog::RELEASE, "> ");
 	}
 }
 

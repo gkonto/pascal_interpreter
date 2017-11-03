@@ -5,6 +5,7 @@
 #include <cstdlib>
 
 #include "interpreter.hpp"
+#include "clog.hpp"
 
 
 /*!
@@ -12,28 +13,27 @@
  */
 
 /*!
- * fn void Interpreter::raiseParseError()
+ * fn void Parser::raiseParseError()
  * \brief Raise assertion when error occurs while parsing
  */
-void Interpreter::raiseError()
+void Parser::raiseError()
 {
-	std::cout << "Invalid syntax" << std::endl;
+	CLog::write(CLog::RELEASE, "Invalid syntax\n");
+/*	std::cout << "Invalid syntax" << std::endl;*/
 	assert(true);
 }
 
 /*!
- * fn void Interpreter::eat()
+ * fn void Parser::eat()
  * \brief Compare the current token type with the passed token
  * type and if they match then "eat" the current token
  * and assign the next token to the currentToken,
  * otherwise raise exception. 
  */
-void Interpreter::eat(const TokenType &tokType)
+void Parser::eat(const TokenType &tokType)
 {
 	if (currentToken_.type() == tokType) {
-/*		std::cout << "Eat after: " << lexer_.getNextToken().representation() << std::endl;*/
 		currentToken_ = lexer_.getNextToken();
-/*		std::cout << "Eat after: " << currentToken_.representation() << std::endl;*/
 	} else {
 		raiseError();
 	}
@@ -46,8 +46,9 @@ void Interpreter::eat(const TokenType &tokType)
  * term   : factor(( MUL | DIV) factor)*
  * factor : INTEGER
  */
-Node *Interpreter::expr()
+Node *Parser::expr()
 {
+	CLog::write(CLog::DEBUG, "Entered Parser::expr()\n");
 	Node *node = term();
 
 	while (currentToken_.isOperatorFirstPrecedence()) {
@@ -57,6 +58,7 @@ Node *Interpreter::expr()
 		} else if (tok.type() == T_MINUS) {
 			eat(T_MINUS);
 		}
+		CLog::write(CLog::DEBUG, "Parser::expr() before BinOp First precedence\n");
 		node = new BinOp(node, tok, term());
 	}
 	return node;
@@ -67,11 +69,13 @@ Node *Interpreter::expr()
  * \brief factor : INTEGER | LPAREN expr RPAREN
  * \return An T_INTEGER token value
  */
-Node *Interpreter::factor()
+Node *Parser::factor()
 {
+	CLog::write(CLog::DEBUG, "Entered Parser::factor()\n");
 	Token tok = currentToken_;
 	if (tok.type() == T_INTEGER) {
 		eat(T_INTEGER);
+		CLog::write(CLog::DEBUG, "Entered Parser::factor():  %s\n", tok.representation().c_str());
 		return new Number(tok);
 	} else if (tok.type() == T_LPAREN) {
 		eat(T_LPAREN);
@@ -87,8 +91,9 @@ Node *Interpreter::factor()
  * \brief term : factor((MUL | DIV) factor)*
  * \return An T_INTEGER token value
  */
-Node *Interpreter::term()
+Node *Parser::term()
 {
+	CLog::write(CLog::DEBUG, "Entered Parser::term()\n");
 	Node *node = factor();
 
 	while (currentToken_.isOperatorSecondPrecedence()) {
@@ -98,10 +103,49 @@ Node *Interpreter::term()
 		} else if (tok.type() == T_DIV) {
 			eat(T_DIV);
 		}
+		CLog::write(CLog::DEBUG, "Parser::term() before BinOp\n");
 		node = new BinOp(node, tok, factor());
+		CLog::write(CLog::DEBUG, "Parser::term() BinOp is %p\n", node);
 	}
 	return node;
 }
 
+int NodeVisitor::visit(Node *node)
+{
+	CLog::write(CLog::DEBUG, "Entered NodeVisitor::visit\n");
+	return node->visit();
+}
 
+
+/*//FIXME*/
+int BinOp::visit()
+{
+	CLog::write(CLog::DEBUG, "Entered BinOp::visit\n");
+	CLog::write(CLog::DEBUG, "this->op_.type(): %s\n", this->op_.representation().c_str());
+	if (this->op_.type() == T_PLUS) {
+		return this->lhs_->visit() + this->rhs_->visit();
+	} else if (this->op_.type() == T_MINUS) {
+		return this->lhs_->visit() - this->rhs_->visit();
+	} else if (this->op_.type() == T_MUL) {
+		return this->lhs_->visit() * this->rhs_->visit();
+	} else if (this->op_.type() == T_DIV) {
+		return this->lhs_->visit() / this->rhs_->visit();
+	}
+	CLog::write(CLog::DEBUG, "BinOp::visit should not reach\n");
+	return 0;
+}
+
+int Number::visit()
+{
+	CLog::write(CLog::DEBUG, "Entered Number::visit %d\n", this->value());
+	CLog::write(CLog::DEBUG, "Entered Number::visit %s\n", this->getToken().representation().c_str());
+	return this->value();
+}
+
+int Interpreter::interpret()
+{
+	CLog::write(CLog::DEBUG, "Entered Interpreter::interpret()\n");
+	Node *tree = parser_.parse();
+	return visit(tree);
+}
 
