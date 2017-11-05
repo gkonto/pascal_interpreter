@@ -30,8 +30,21 @@ class BinOp : public Node
 		Node *getLhs() { return lhs_; }
 	private:
 		Node *lhs_;
+		//FIXME to mpoulo, na ton apothikeuso sto Node
 		Token op_;
 		Node *rhs_;
+};
+
+class UnaryOp : public Node
+{
+	public:
+		UnaryOp(Token &op, Node *expr) : expr_(expr)
+		{
+			setToken(op);
+		}
+	private:
+		int visit();
+		Node *expr_;
 };
 
 class Number : public Node

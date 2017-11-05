@@ -222,7 +222,7 @@ static void start()
 		Parser parser(lex);
 		Interpreter interpreter(parser);
 		int result = interpreter.interpret();
-		std::cout << result << std::endl;
+		CLog::write(CLog::RELEASE, "%d\n", result);
 		CLog::write(CLog::RELEASE, "> ");
 	}
 }
