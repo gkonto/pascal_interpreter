@@ -1,6 +1,11 @@
 #include <iostream>
 #include <sstream>
 #include <cassert>
+#include <string.h>
+
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 #include "clog.hpp"
 #include "interpreter.hpp"
@@ -39,6 +44,16 @@ std::string Token::getTokenTypeLabel()
 		case T_MUL    : return "T_MUL";
 		case T_DIV    : return "T_DIV";
 		case T_EOF    : return "T_EOF";
+		case T_LPAREN : return "T_LPAREN";
+		case T_RPAREN : return "T_RPAREN";
+
+		case T_PASC_BEGIN  : return "T_PASC_BEGIN";
+		case T_PASC_END    : return "T_PASC_END";
+		case T_PASC_ASSIGN : return "T_PASC_ASSIGN";
+		case T_PASC_SEMI   : return "T_PASC_SEMI";
+		case T_PASC_DOT    : return "T_PASC_DOT";
+		case T_PASC_ID     : return "T_PASC_ID";
+
 		case T_MAX    : return "T_MAX";
 		default:
 			raiseLabelError();
@@ -134,6 +149,55 @@ void Lexer::advance()
 }
 
 /*!
+ * fn void Lexer::peek()
+ * \brief No brief here. TODO !
+ */
+char Lexer::peek()
+{
+	size_t peekPos = pos_ + 1;
+	if (peekPos > text_.size() - 1) {
+		CLog::write(CLog::DEBUG, "peek()\n");
+		return '\0';
+	} else {
+		CLog::write(CLog::DEBUG, "peek text_[pos] %c\n", text_[peekPos]);
+		return text_[peekPos];
+	}
+}
+
+
+Token Lexer::_getReservedKeyword(const std::string &result)
+{
+	CLog::write(CLog::DEBUG, "_getReservedKeyword() %s\n", result.c_str());
+	if (!strcmp(result.c_str(), "BEGIN")) {
+		return Token(T_PASC_BEGIN, result);
+	} else if (!strcmp(result.c_str(), "END")) {
+		return Token(T_PASC_END, result);
+	}
+
+	//If result is not a reserved keyword, then it's a variable or a mistake :)
+	return Token(T_PASC_ID, result); 
+}
+
+
+/*!
+ * fn void Lexer::_id()
+ * \brief Handles identifiers and reserved keywords
+ * \return Token
+ */
+Token Lexer::_id()
+{
+	std::string result = "";
+
+	while (!isblank(currentChar_) && isalnum(currentChar_)) {
+		result.append(1, currentChar_);
+		advance();
+	}
+	CLog::write(CLog::DEBUG, "_id() --> %s\n", result.c_str());
+	Token tok = _getReservedKeyword(result); 
+	return tok;
+}
+
+/*!
  * fn void Lexer::skipWhiteSpace()
  */
 void Lexer::skipWhiteSpace()
@@ -168,7 +232,25 @@ std::string Lexer::integer()
  */
 Token Lexer::getNextToken()
 {
+	CLog::write(CLog::DEBUG, "getNextToken (beginning)\n\n");
 	while (currentChar_ != '\0') {
+		if (isalpha(currentChar_)) {
+			return _id();
+		}
+		if (currentChar_ == ':' && peek() == '=') {
+			advance();
+			advance();
+			return Token(T_PASC_ASSIGN, ":=");
+		}
+	
+		if (currentChar_ == ';') {
+			advance();
+			return Token(T_PASC_SEMI, ";");
+		}
+		if (currentChar_ == '.') {
+			advance();
+			return Token(T_PASC_DOT, ".");
+		}
 		if (isspace(currentChar_)) {
 			skipWhiteSpace();
 			continue;
@@ -200,6 +282,7 @@ Token Lexer::getNextToken()
 			advance();
 			return Token(T_RPAREN, ")");
 		}
+		CLog::write(CLog::DEBUG, "getNextTOken! should not Readch!");
 		raiseError();
 	}
 	return Token(T_EOF, "");
@@ -208,26 +291,76 @@ Token Lexer::getNextToken()
 /*********************LEXER***************************/
 /*****************************************************/
 
-static void start()
+static void start(std::ifstream &file)
 {
-/*	std::cout << "> ";*/
-	CLog::write(CLog::RELEASE, "> ");
 	std::string expr;
 
-	while (getline(std::cin, expr)) {
-		if (expr.empty()) {
-			continue;
-		}
-		Lexer lex(expr);
+	if (file.is_open()) {
+		std::string prog { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
+		std::cout << prog << std::endl;
+		Lexer lex(prog) ;
+		CLog::write(CLog::DEBUG, "start() before parser, parse(lex)\n"); 
 		Parser parser(lex);
+		CLog::write(CLog::DEBUG, "interpret() before interpret, interpret(parser)\n"); 
 		Interpreter interpreter(parser);
-		int result = interpreter.interpret();
-		CLog::write(CLog::RELEASE, "%d\n", result);
+		Node *result = interpreter.interpret();
+
+
+
+
+		// DEBUG
+		NodeVisitor nodVis;
+		nodVis.visitForDetails(result);
+
+		// todo it should be 
+		// compound-->compound->assign
+		//ask for node details		
+
+
+
+
+	} else {
 		CLog::write(CLog::RELEASE, "> ");
+		while (getline(std::cin, expr)) {
+			if (expr.empty()) {
+				continue;
+			}
+			Lexer lex(expr);
+			Parser parser(lex);
+			Interpreter interpreter(parser);
+			//int result = interpreter.interpret();
+			//CLog::write(CLog::RELEASE, "%d\n", result);
+			CLog::write(CLog::RELEASE, "> ");
+		}
 	}
 }
 
-int main(void)
+static int getFileWithRandomExpression(const char *argv, std::ifstream &file)
 {
-	start();
+	file.open(argv, std::ifstream::in);
+	if (!file.is_open()) {
+		assert(false);
+		return 0;
+	} 
+	return 1;
+}
+
+static int parseArgs(const int argc, char **argv, std::ifstream &file)
+{
+	for (int i = 0; i < argc; i++) {
+		if (!strcmp(argv[i], "-f")) {
+			if (argv[i+1]) {
+				getFileWithRandomExpression(argv[i+1], file);
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+int main(int argc, char **argv)
+{
+	std::ifstream file;
+	parseArgs(argc, argv, file);
+	start(file);
 }
