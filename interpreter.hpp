@@ -6,7 +6,6 @@
 #include <vector>
 #include <map>
 
-extern std::map<std::string, int> GLOBAL_SCOPE;
 
 class Node
 {
@@ -15,7 +14,7 @@ class Node
 		// =0 gia abstract mia apo autes i kai polles
 		virtual Node *getRhs() { return NULL; }
 		virtual Node *getLhs() { return NULL; }
-		virtual int  visit()   { CLog::write(CLog::DEBUG, "virtual visit Should not reach!\n"); return 0; }
+		virtual int  visitData()   { CLog::write(CLog::DEBUG, "virtual visit Should not reach!\n"); return 0; }
 		virtual int  value()   { return 1; }
 		virtual void nodeDetails(int indent) {}
 	private:
@@ -38,7 +37,7 @@ class TokenNode : public Node
 class Compound : public Node
 {
 	public:
-		int visit();
+		int visitData();
 		void addNode(Node *node); 
 		void nodeDetails(int indent);
 
@@ -60,7 +59,7 @@ class Var : public TokenNode
 			value_ = op.value();
 		}
 		void nodeDetails(int indent);
-		int visit();
+		int visitData();
 	private:
 		std::string value_;
 };
@@ -72,7 +71,7 @@ class Var : public TokenNode
 class NoOp : public Node
 {
 	public:
-		int visit();
+		int visitData();
 		void nodeDetails(int indent);
 	private:
 };
@@ -90,7 +89,7 @@ class Assign : public TokenNode
 		{
 			setToken(op);
 		}
-		int visit();
+		int visitData();
 		void nodeDetails(int indent);
 	private:
 		TokenNode *lhs_;
@@ -104,7 +103,7 @@ class BinOp : public TokenNode
        		{
 		       	setToken(op);
 		}
-		int visit();
+		int visitData();
 		void nodeDetails(int indent);
 		Node *getRhs() { return rhs_; }
 		Node *getLhs() { return lhs_; }
@@ -120,7 +119,7 @@ class UnaryOp : public TokenNode
 		{
 			setToken(op);
 		}
-		int visit();
+		int visitData();
 		void nodeDetails(int indent);
 		Node *getRhs() { return NULL;}
 		Node *getLhs() { return NULL;}
@@ -135,7 +134,7 @@ class Number : public TokenNode
        		{
 			setToken(tok);
 		}
-		int visit();
+		int visitData();
 		int value() { return atoi(getToken().value().c_str()); }
 		void nodeDetails(int indent);
 	private:
@@ -169,7 +168,7 @@ class NodeVisitor
 {
 	public:
 		NodeVisitor(int ind = 0) : indent_(ind) {}
-		int visit(Node *node);//FIXME
+		void visitData(Node *node);//FIXME
 		void visitForDetails(Node *node);
 
 /*		generic_visit(Node *node)://FIXME*/
@@ -178,14 +177,15 @@ class NodeVisitor
 		int indent_;
 };
 
+
 class Interpreter : public NodeVisitor
 {
 	public:
 		Interpreter(Parser parser) : parser_(parser) {}
 		Node *interpret();
+		static std::map<std::string, int> GLOBAL_SCOPE;
 	private:
 		Parser parser_;
-		//std::map<std::string, int> GLOBAL_SCOPE;
 };
 
 #endif

@@ -8,8 +8,6 @@
 #include "interpreter.hpp"
 #include "clog.hpp"
 
-std::map<std::string, int> GLOBAL_SCOPE;
-
 /*!
  * \file token.cpp
  */
@@ -144,7 +142,7 @@ void Compound::nodeDetails(int indent)
 {
 	size_t childrenNum = children_.size();
 	std::string ind(indent, ' ');
-	CLog::write(CLog::RELEASE, "%sThis is a Compound Node with %d children\n",ind.c_str(), childrenNum);
+	CLog::write(CLog::RELEASE, "%sCompound Node with %d children\n",ind.c_str(), childrenNum);
 	std::vector<Node *>::iterator it;
 
 
@@ -362,14 +360,13 @@ TokenNode *Parser::term()
 	return node;
 }
 
-int NodeVisitor::visit(Node *node)
+void NodeVisitor::visitData(Node *node)
 {
 	CLog::write(CLog::DEBUG, "NodeVisitor::visit\n");
-	CLog::write(CLog::DEBUG, "NodeVisitor::visit() %p\n", node);
+	CLog::write(CLog::DEBUG, "NodeVisitor::visitData() %p\n", node);
 	if (node) {
-		return node->visit();
+		node->visitData();
 	}
-	return 0;
 }
 
 void NodeVisitor::visitForDetails(Node *node)
@@ -377,74 +374,76 @@ void NodeVisitor::visitForDetails(Node *node)
 	node->nodeDetails(indent_);
 }
 
-int BinOp::visit()
+int BinOp::visitData()
 {
 	CLog::write(CLog::DEBUG, "BinOp::visit\n");
 	CLog::write(CLog::DEBUG, "BinOp: this->op_.type(): %s\n", this->getToken().representation().c_str());
 	if (this->getToken().type() == T_PLUS) {
-		return this->lhs_->visit() + this->rhs_->visit();
+		return this->lhs_->visitData() + this->rhs_->visitData();
 	} else if (this->getToken().type() == T_MINUS) {
-		return this->lhs_->visit() - this->rhs_->visit();
+		return this->lhs_->visitData() - this->rhs_->visitData();
 	} else if (this->getToken().type() == T_MUL) {
-		return this->lhs_->visit() * this->rhs_->visit();
+		return this->lhs_->visitData() * this->rhs_->visitData();
 	} else if (this->getToken().type() == T_DIV) {
-		return this->lhs_->visit() / this->rhs_->visit();
+		return this->lhs_->visitData() / this->rhs_->visitData();
 	}
 	CLog::write(CLog::DEBUG, "BinOp::visit should not reach\n");
 	return 0;
 }
 
-int UnaryOp::visit()
+int UnaryOp::visitData()
 {
-	CLog::write(CLog::DEBUG, "UnaryOp::visit(): Start!\n");
+	CLog::write(CLog::DEBUG, "UnaryOp::visitData(): Start!\n");
 	Token tok = this->getToken();
 	if (tok.type() == T_PLUS) {
-		return +(this->expr_->visit());
+		return +(this->expr_->visitData());
 	} else if (tok.type() == T_MINUS) {
-		return -(this->expr_->visit());
+		return -(this->expr_->visitData());
 	}
-	CLog::write(CLog::DEBUG, "UnaryOp::visit(): Should not reach!\n");
+	CLog::write(CLog::DEBUG, "UnaryOp::visitData(): Should not reach!\n");
 	return 0;
 }
 
 /*!
- * fn void Compound::visit()
+ * fn void Compound::visitData()
  * \brief  Compound visitor iterates over its children and visits each one in turn.
  * \return An T_INTEGER token value
  */
-int Compound::visit()
+int Compound::visitData()
 {
 	std::vector<Node *>::iterator it;
 	for (it = children_.begin(); it != children_.end(); it++) 
 	{
-		//edo ta gamisa ti mana
-/*		it->visit();*/
+		(*it)->visitData();
 	}
 	return 0;
 }
 
-int Assign::visit()
+std::map<std::string, int>Interpreter::GLOBAL_SCOPE;
+
+int Assign::visitData()
 {
 	typedef std::map<std::string, int>KVMap;
 
 	std::string varName = this->lhs_->getToken().value();
 	//ena map pou tha pairno to key()
 	std::map<std::string, int>::iterator it;
+	CLog::write(CLog::DEBUG, "visitData %s\n", varName.c_str());
 
-	it = GLOBAL_SCOPE.find(varName);
-	if (it != GLOBAL_SCOPE.end()) {
-		GLOBAL_SCOPE.insert(KVMap::value_type(varName, this->rhs_->visit()));
+	it = Interpreter::GLOBAL_SCOPE.find(varName);
+	if (it == Interpreter::GLOBAL_SCOPE.end()) {
+		Interpreter::GLOBAL_SCOPE.insert(KVMap::value_type(varName, this->rhs_->visitData()));
 	}
 	return 0;
 }
 
-int Var::visit()
+int Var::visitData()
 {
 	std::string varName = this->getToken().value();
 	std::map<std::string, int>::iterator it;
-	it = GLOBAL_SCOPE.find(varName);
-	if (it != GLOBAL_SCOPE.end()) {
-		CLog::write(CLog::RELEASE, "Var::visit() --> No Such Variable!");
+	it = Interpreter::GLOBAL_SCOPE.find(varName);
+	if (it == Interpreter::GLOBAL_SCOPE.end()) {
+		CLog::write(CLog::RELEASE, "Var::visitData() --> No Such Variable!");
 	} else {
 		return it->second;
 	}
@@ -453,17 +452,17 @@ int Var::visit()
 }
 
 /*!
- * fn void NoOp::visit()
+ * fn void NoOp::visitData()
  * \brief  NoOp visitor does nothing! 
  * \return An T_INTEGER token value
  */
-int NoOp::visit()
+int NoOp::visitData()
 {
 	return 0;
 }
 
 
-int Number::visit()
+int Number::visitData()
 {
 	CLog::write(CLog::DEBUG, "Number::visit %s\n", this->getToken().representation().c_str());
 	return this->value();

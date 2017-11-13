@@ -12,7 +12,7 @@
 #include "token.hpp"
 
 bool CLog::m_bInitialised = true;
-int CLog::m_nLevel = CLog::RELEASE ;
+int CLog::m_nLevel = CLog::DEBUG ;
 /*!
  *  \file token.cpp
  */
@@ -305,12 +305,18 @@ static void start(std::ifstream &file)
 		Interpreter interpreter(parser);
 		Node *result = interpreter.interpret();
 
-
-
-
 		// DEBUG
 		NodeVisitor nodVis;
 		nodVis.visitForDetails(result);
+
+		std::cout << "GLOBAL_SCOPE" << std::endl;
+		nodVis.visitData(result);
+		std::cout << Interpreter::GLOBAL_SCOPE.size() << std::endl;
+		std::map<std::string, int>::iterator it;
+		for (it = Interpreter::GLOBAL_SCOPE.begin(); it != Interpreter::GLOBAL_SCOPE.end(); it++) {
+			std::cout << it->first ;
+			std::cout << "   " << it->second << std::endl;
+		}
 
 		// todo it should be 
 		// compound-->compound->assign
