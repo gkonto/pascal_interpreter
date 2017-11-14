@@ -80,6 +80,7 @@ TokenNode *Parser::expr()
  * \brief factor : T_PLUS factor 
  * 		   | T_MINUS factor
  * 		   | T_INTEGER
+ * 		   | T_REAL
  * 		   | T_LPAREN expr T_RPAREN
  * 		   | variable
  * \return An T_INTEGER token value
@@ -88,17 +89,18 @@ TokenNode *Parser::factor()
 {
 	CLog::write(CLog::DEBUG, "Parser::factor()\n");
 	Token tok = currentToken_;
+
 	if (tok.type() == T_PLUS) {
 		eat(T_PLUS);
-		CLog::write(CLog::DEBUG, "factor() UnaryPlus create\n");
 		return new UnaryOp(tok, factor());
 	} else if (tok.type() == T_MINUS) {
 		eat(T_MINUS);
-		CLog::write(CLog::DEBUG, "factor() UnaryMinus create\n");
 		return new UnaryOp(tok, factor());
 	} else if (tok.type() == T_INTEGER) {
 		eat(T_INTEGER);
-		CLog::write(CLog::DEBUG, "Parser::factor():  %s\n", tok.representation().c_str());
+		return new Number(tok);
+	} else if (tok.type() == T_REAL) {
+		eat(T_REAL);
 		return new Number(tok);
 	} else if (tok.type() == T_LPAREN) {
 		eat(T_LPAREN);
@@ -112,17 +114,24 @@ TokenNode *Parser::factor()
 }
 
 /*!
- * fn Node *Parser::program()
- * \brief program : compound_statement DOT
- * \return Node * 
+ * fn Program *Parser::program()
+ * \brief program : T_PASC_PROGRAM variable T_SEMI block DOT
+ * \return Program * 
  */
-Node *Parser::program()
+Program *Parser::program()
 {
 	CLog::write(CLog::DEBUG, "program()\n"); 
-	Compound *node = compoundStatement();
+	eat(T_PASC_PROGRAM_RESERV);
+	Var *varNode = variable();
+	std::string progName = varNode->getValue();
+	CLog::write(CLog::DEBUG, "program name %s\n", progName.c_str()); 
+	eat(T_SEMI);
 
-	eat(T_PASC_DOT);
-	return node;
+	Block *blockNode = block();
+	Program *progNode = new Program(progName, blockNode);
+	eat(T_PASC_DOT_RESERV);
+
+	return progNode;
 }
 
 /*!
@@ -151,6 +160,58 @@ void Compound::nodeDetails(int indent)
 		(*it)->nodeDetails(indent);
 	}
 }
+
+/*!
+ * fn void VarDecl::nodeDetails(int indent)
+ * \brief : A string that reports details about the node
+ */
+void VarDecl::nodeDetails(int indent)
+{
+	std::string ind(indent, ' ');
+	CLog::write(CLog::RELEASE, "%sVarDecl Node\n",ind.c_str());
+	indent = indent + 5;
+	varNode_->nodeDetails(indent);
+	typeNode_->nodeDetails(indent);
+}
+
+/*!
+ * fn void Type::nodeDetails(int indent)
+ * \brief : A string that reports details about the node
+ */
+void Type::nodeDetails(int indent)
+{
+	std::string ind(indent, ' ');
+	CLog::write(CLog::RELEASE, "%sType Node with value_: %s\n", ind.c_str(), value_.c_str());
+}
+
+/*!
+ * fn void Compound::nodeDetails(int indent)
+ * \brief : A string that reports details about the node
+ */
+void Program::nodeDetails(int indent)
+{
+	std::string ind(indent, ' ');
+	CLog::write(CLog::RELEASE, "%sProgram Node with name %s\n",ind.c_str(), name_.c_str());
+	block_->nodeDetails(indent + 5);
+}
+
+/*!
+ * fn void Block::nodeDetails(int indent)
+ * \brief : A string that reports details about the node and its children
+ */
+void Block::nodeDetails(int indent)
+{
+	std::string ind(indent, ' ');
+	CLog::write(CLog::RELEASE, "%sBlock Node %d variables and a compound Node\n", ind.c_str(), declarations_.size());
+	std::vector<VarDecl *>::iterator it;
+	indent = indent + 5;
+	for (it = declarations_.begin(); it != declarations_.end(); it++)
+	{
+		(*it)->nodeDetails(indent);
+	}
+	compoundStatement_->nodeDetails(indent);
+}
+
 
 /*!
  * fn void Var::nodeDetails(int indent)
@@ -227,9 +288,9 @@ void Number::nodeDetails(int indent)
 Compound *Parser::compoundStatement()
 {
 	CLog::write(CLog::DEBUG, "compoundStatement():\n"); 
-	eat(T_PASC_BEGIN);
+	eat(T_PASC_BEGIN_RESERV);
 	std::vector<Node *> nodes = statementList();
-	eat(T_PASC_END);
+	eat(T_PASC_END_RESERV);
 
 	CLog::write(CLog::DEBUG, "nodes number(): %d\n", nodes.size()); 
 	Compound *root = new Compound();
@@ -244,7 +305,7 @@ Compound *Parser::compoundStatement()
 
 /*!
  * fn std::vector<Node *>Parser::statementList()
- * \brief : statementList : statement | statement T_PASC_SEMI statementList
+ * \brief : statementList : statement | statement T_SEMI statementList
  * \return std::vector<Node *>
  */
 std::vector<Node *> Parser::statementList()
@@ -258,8 +319,8 @@ std::vector<Node *> Parser::statementList()
 	results.push_back(node);
 	CLog::write(CLog::DEBUG, "\nstatementList(): statementsnum %d\n", results.size()); 
 
-	while (currentToken_.type() == T_PASC_SEMI) {
-		eat(T_PASC_SEMI);
+	while (currentToken_.type() == T_SEMI) {
+		eat(T_SEMI);
 		results.push_back(statement());
 	}
 
@@ -282,7 +343,7 @@ Node *Parser::statement()
 	CLog::write(CLog::DEBUG, "\t currentToken_ %s\n", currentToken_.representation().c_str());
 	Node *node = NULL;
 
-	if (currentToken_.type() == T_PASC_BEGIN) {
+	if (currentToken_.type() == T_PASC_BEGIN_RESERV) {
 		node = compoundStatement();
 	} else if (currentToken_.type() == T_PASC_ID) {
 		node = assignmentStatement();
@@ -316,10 +377,10 @@ Assign *Parser::assignmentStatement()
  * \brief : variable : T_PASC_ID
  * \return Node *
  */
-TokenNode *Parser::variable()
+Var *Parser::variable()
 {
-	CLog::write(CLog::DEBUG, "VARIABLE node %s\n", currentToken_.representation().c_str()); 
-	TokenNode *node = new Var(currentToken_);
+	CLog::write(CLog::DEBUG, "VARIABLE node: %s\n", currentToken_.representation().c_str()); 
+	Var *node = new Var(currentToken_);
 	eat(T_PASC_ID);
 	CLog::write(CLog::DEBUG, "\t variable %s\n", currentToken_.representation().c_str());
 
@@ -337,8 +398,98 @@ NoOp *Parser::empty()
 }
 
 /*!
+ * fn Block *Parser::block()
+ * \brief : declarations compoundStatement 
+ * \return Block *
+ */
+Block* Parser::block()
+{
+	CLog::write(CLog::DEBUG, "block: %s\n", currentToken_.representation().c_str()); 
+	std::vector<VarDecl *>declarationNodes = declarations();
+	Compound *comp = compoundStatement();
+	Block *node = new Block(declarationNodes, comp);
+
+	CLog::write(CLog::DEBUG, "END OF BLOCK NODE Creator: %s\n", currentToken_.representation().c_str()); 
+	return node;
+}
+
+/*!
+ * fn VarDecl *Parser::declarations()
+ * \brief : declarations : VAR(variableDeclaration SEMI) + | empty
+ * \return Block *
+ */
+std::vector<VarDecl *> Parser::declarations()
+{
+	std::vector<VarDecl *> declarations;
+	if (currentToken_.type() == T_PASC_VAR_RESERV) {
+		eat(T_PASC_VAR_RESERV);
+		while (currentToken_.type() == T_PASC_ID) {
+			std::vector<VarDecl *> vd = variableDeclaration();
+			declarations.reserve(declarations.size() + distance(vd.begin(), vd.end()));
+			declarations.insert(declarations.end(), vd.begin(), vd.end());
+			eat(T_SEMI);
+		}
+	}
+	
+	return declarations;
+}
+
+/*!
+ * fn VarDecl *Parser::variableDeclaration()
+ * \brief : variable_declaration : T_PASC_ID (T_COMMA T_PASC_ID)* T_COLON type_spec
+ * \return 
+ */
+ std::vector<VarDecl *> Parser::variableDeclaration()
+{
+	CLog::write(CLog::DEBUG, "variableDeclaration Beginning: %s\n", currentToken_.representation().c_str()); 
+	Var *var = new Var(currentToken_);
+	std::vector<Var *> varNodes;
+	varNodes.push_back(var);
+	eat(T_PASC_ID);
+	
+	while (currentToken_.type() == T_COMMA) {
+		eat(T_COMMA);
+		Var *var = new Var(currentToken_);
+		varNodes.push_back(var);
+		eat(T_PASC_ID);
+	}
+
+	eat(T_COLON);
+	Type *node = typeSpec();
+	std::vector<VarDecl *> varDeclarations;
+	std::vector<Var *>::iterator it;
+	for ( it = varNodes.begin(); it != varNodes.end(); it++) {
+		VarDecl *vd = new VarDecl(*it, node);
+		varDeclarations.push_back(vd);
+	}
+
+	CLog::write(CLog::DEBUG, "variableDeclaration End: %s\n", currentToken_.representation().c_str()); 
+	return varDeclarations;
+}
+
+/*!
+ * fn VarDecl *Parser::typeSpec()
+ * \brief : typeSpec : T_INTEGER | T_REAL
+ * \return 
+ */
+Type *Parser::typeSpec()
+{
+	CLog::write(CLog::DEBUG, "typeSpec Start! %s\n", currentToken_.representation().c_str()); 
+	Token tok = currentToken_;
+	if (currentToken_.type() == T_PASC_INTEGER_RESERV) {
+		eat(T_PASC_INTEGER_RESERV);
+	} else if (currentToken_.type() == T_PASC_REAL_RESERV) {
+		eat(T_PASC_REAL_RESERV);
+	} else {
+		assert(false);
+	}
+	Type *node = new Type(tok);
+	return node;
+}
+
+/*!
  * fn void Interpeter::term()
- * \brief term : factor((MUL | DIV) factor)*
+ * \brief term : factor((MUL | INTEGER_DIV | FLOAT_DIV) factor)*
  * \return An T_INTEGER token value
  */
 TokenNode *Parser::term()
@@ -352,6 +503,8 @@ TokenNode *Parser::term()
 			eat(T_MUL);
 		} else if (tok.type() == T_DIV) {
 			eat(T_DIV);
+		} else if (tok.type() == T_PASC_INT_DIV_RESERV) {
+			eat(T_PASC_INT_DIV_RESERV);
 		}
 		CLog::write(CLog::DEBUG, "Parser::term() before BinOp\n");
 		node = new BinOp(node, tok, factor());
@@ -374,7 +527,7 @@ void NodeVisitor::visitForDetails(Node *node)
 	node->nodeDetails(indent_);
 }
 
-int BinOp::visitData()
+double BinOp::visitData()
 {
 	CLog::write(CLog::DEBUG, "BinOp::visit\n");
 	CLog::write(CLog::DEBUG, "BinOp: this->op_.type(): %s\n", this->getToken().representation().c_str());
@@ -385,13 +538,44 @@ int BinOp::visitData()
 	} else if (this->getToken().type() == T_MUL) {
 		return this->lhs_->visitData() * this->rhs_->visitData();
 	} else if (this->getToken().type() == T_DIV) {
-		return this->lhs_->visitData() / this->rhs_->visitData();
+		return this->lhs_->visitData() / this->rhs_->visitData(); 
+	} else if (this->getToken().type() == T_PASC_INT_DIV_RESERV) {
+		return this->lhs_->visitData() / this->rhs_->visitData();//FIXME oxi / alla diairesi pou krataei to akeraio meros !
 	}
+	assert(false);
 	CLog::write(CLog::DEBUG, "BinOp::visit should not reach\n");
 	return 0;
 }
 
-int UnaryOp::visitData()
+double Program::visitData()
+{
+	block_->visitData();
+	return 0;
+}
+
+double Block::visitData()
+{
+	std::vector<VarDecl *>::iterator it;
+	for (it = declarations_.begin(); it != declarations_.end(); it++) {
+		(*it)->visitData();
+	}
+	compoundStatement_->visitData();
+	return 0;
+}
+
+double VarDecl::visitData()
+{
+//	varNode_->visitData();
+	return 0;
+}
+
+double Type::visitData()
+{
+	//do nothing
+	return 0;
+}
+
+double UnaryOp::visitData()
 {
 	CLog::write(CLog::DEBUG, "UnaryOp::visitData(): Start!\n");
 	Token tok = this->getToken();
@@ -409,7 +593,7 @@ int UnaryOp::visitData()
  * \brief  Compound visitor iterates over its children and visits each one in turn.
  * \return An T_INTEGER token value
  */
-int Compound::visitData()
+double Compound::visitData()
 {
 	std::vector<Node *>::iterator it;
 	for (it = children_.begin(); it != children_.end(); it++) 
@@ -419,15 +603,15 @@ int Compound::visitData()
 	return 0;
 }
 
-std::map<std::string, int>Interpreter::GLOBAL_SCOPE;
+std::map<std::string, double>Interpreter::GLOBAL_SCOPE;
 
-int Assign::visitData()
+double Assign::visitData()
 {
-	typedef std::map<std::string, int>KVMap;
+	typedef std::map<std::string, double>KVMap;
 
 	std::string varName = this->lhs_->getToken().value();
 	//ena map pou tha pairno to key()
-	std::map<std::string, int>::iterator it;
+	std::map<std::string, double>::iterator it;
 	CLog::write(CLog::DEBUG, "visitData %s\n", varName.c_str());
 
 	it = Interpreter::GLOBAL_SCOPE.find(varName);
@@ -437,10 +621,10 @@ int Assign::visitData()
 	return 0;
 }
 
-int Var::visitData()
+double Var::visitData()
 {
 	std::string varName = this->getToken().value();
-	std::map<std::string, int>::iterator it;
+	std::map<std::string, double>::iterator it;
 	it = Interpreter::GLOBAL_SCOPE.find(varName);
 	if (it == Interpreter::GLOBAL_SCOPE.end()) {
 		CLog::write(CLog::RELEASE, "Var::visitData() --> No Such Variable!");
@@ -456,21 +640,14 @@ int Var::visitData()
  * \brief  NoOp visitor does nothing! 
  * \return An T_INTEGER token value
  */
-int NoOp::visitData()
+double NoOp::visitData()
 {
 	return 0;
 }
 
-
-int Number::visitData()
-{
-	CLog::write(CLog::DEBUG, "Number::visit %s\n", this->getToken().representation().c_str());
-	return this->value();
-}
-
 Node* Interpreter::interpret()
 {
-	CLog::write(CLog::DEBUG, "Interpreter::interpret()\n");
+	CLog::write(CLog::DEBUG, "\n\nInterpreter::interpret()\n");
 	Node *tree = parser_.parse();
 	CLog::write(CLog::DEBUG, "Interpreter::interpret() 2\n");
 	return tree;

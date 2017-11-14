@@ -1,6 +1,4 @@
 #pragma once
-#ifndef TOKEN_HPP
-#define TOKEN_HPP
 
 /*!
  *  \file token.hpp
@@ -10,6 +8,7 @@
 enum TokenType
 {
 	T_INTEGER,	/*!< The Token type_ is an integer            */
+	T_REAL, 	/*!< The Token type_ is a  real            */
 	T_PLUS,		/*!< The Token type_ is a plus operator +     */
 	T_MINUS,	/*!< The Token type_ is a minus operator -    */
 	T_DIV,		/*!< The Token type_ is a division operator - */
@@ -17,12 +16,19 @@ enum TokenType
 	T_EOF,		/*!< The Token type_ is EOF                   */
 	T_LPAREN,	/*!< The Token type_ is Left Parenthesis (    */
 	T_RPAREN,	/*!< The Token type_ is Right Parenthesis )   */
+	T_COLON,
+	T_COMMA,
+	T_SEMI,         /*!< The Token type_ is SEMI ;     */
 
-	T_PASC_BEGIN,   /*!< The Token type_ is BEGIN    */
-	T_PASC_END,     /*!< The Token type_ is END     */
-	T_PASC_ASSIGN,  /*!< The Token type_ is ASSIGMENT :=     */
-	T_PASC_SEMI,    /*!< The Token type_ is SEMI ;     */
-	T_PASC_DOT,     /*!< The Token type_ is DOT  .     */
+	T_PASC_BEGIN_RESERV,   /*!< The Token type_ is BEGIN    */
+	T_PASC_END_RESERV,     /*!< The Token type_ is END     */
+	T_PASC_ASSIGN,         /*!< The Token type_ is ASSIGMENT :=     */
+	T_PASC_DOT_RESERV,     /*!< The Token type_ is DOT  .     */
+	T_PASC_REAL_RESERV,
+	T_PASC_INTEGER_RESERV,
+	T_PASC_INT_DIV_RESERV,
+	T_PASC_VAR_RESERV,
+	T_PASC_PROGRAM_RESERV,
 	T_PASC_ID,
 
 	T_MAX
@@ -63,8 +69,8 @@ class Lexer
 		char peek();
 		Token _id();
 		Token getNextToken();
-
-		std::string integer();
+		Token number();
+		void skipComment();
 	private:
 		void raiseError();
 		Token _getReservedKeyword(const std::string &result);
@@ -74,9 +80,6 @@ class Lexer
 		char currentChar_;
 
 };
-
-#endif
-
 
 
 

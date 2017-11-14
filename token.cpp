@@ -12,8 +12,8 @@
 #include "token.hpp"
 
 bool CLog::m_bInitialised = true;
-int CLog::m_nLevel = CLog::DEBUG ;
-/*!
+int CLog::m_nLevel = CLog::RELEASE;
+/*
  *  \file token.cpp
  */
 
@@ -39,20 +39,28 @@ std::string Token::getTokenTypeLabel()
 	switch(type_)
 	{
 		case T_INTEGER: return "T_INTEGER";
+		case T_REAL   : return "T_REAL";
 		case T_PLUS   : return "T_PLUS";
 		case T_MINUS  : return "T_MINUS";
-		case T_MUL    : return "T_MUL";
 		case T_DIV    : return "T_DIV";
+		case T_MUL    : return "T_MUL";
 		case T_EOF    : return "T_EOF";
 		case T_LPAREN : return "T_LPAREN";
 		case T_RPAREN : return "T_RPAREN";
+		case T_COLON  : return "T_COLON";
+		case T_COMMA  : return "T_COMMA";
+		case T_SEMI   : return "T_SEMI";
 
-		case T_PASC_BEGIN  : return "T_PASC_BEGIN";
-		case T_PASC_END    : return "T_PASC_END";
-		case T_PASC_ASSIGN : return "T_PASC_ASSIGN";
-		case T_PASC_SEMI   : return "T_PASC_SEMI";
-		case T_PASC_DOT    : return "T_PASC_DOT";
-		case T_PASC_ID     : return "T_PASC_ID";
+		case T_PASC_BEGIN_RESERV  : return "T_PASC_BEGIN_RESERV";
+		case T_PASC_END_RESERV    : return "T_PASC_END_RESERV";
+		case T_PASC_ASSIGN 	  : return "T_PASC_ASSIGN";
+		case T_PASC_DOT_RESERV    : return "T_PASC_DOT_RESERV";
+		case T_PASC_REAL_RESERV   : return "T_PASC_REAL_RESERV";
+		case T_PASC_INTEGER_RESERV: return "T_PASC_INTEGER_RESERV";
+		case T_PASC_INT_DIV_RESERV: return "T_PASC_INT_DIV_RESERV";
+		case T_PASC_VAR_RESERV    : return "T_PASC_VAR_RESERV";
+		case T_PASC_PROGRAM_RESERV: return "T_PASC_PROGRAM_RESERV";
+		case T_PASC_ID     	  : return "T_PASC_ID";
 
 		case T_MAX    : return "T_MAX";
 		default:
@@ -97,6 +105,7 @@ bool Token::isOperatorSecondPrecedence()
 	{
 		case T_MUL:
 		case T_DIV:
+		case T_PASC_INT_DIV_RESERV:
 			return true;
 		default:
 			return false;
@@ -164,14 +173,35 @@ char Lexer::peek()
 	}
 }
 
+/*!
+ * fn void Lexer::skipComment()
+ * \brief Discards all the characters until the closing curly brace is found. 
+ */
+void Lexer::skipComment()
+{
+	while (currentChar_ != '}') {
+		advance();
+	}
+	advance(); // the closing curly brace
+}
 
 Token Lexer::_getReservedKeyword(const std::string &result)
 {
 	CLog::write(CLog::DEBUG, "_getReservedKeyword() %s\n", result.c_str());
 	if (!strcmp(result.c_str(), "BEGIN")) {
-		return Token(T_PASC_BEGIN, result);
+		return Token(T_PASC_BEGIN_RESERV, result);
 	} else if (!strcmp(result.c_str(), "END")) {
-		return Token(T_PASC_END, result);
+		return Token(T_PASC_END_RESERV, result);
+	} else if (!strcmp(result.c_str(), "PROGRAM")) {
+		return Token(T_PASC_PROGRAM_RESERV, result);
+	} else if (!strcmp(result.c_str(), "VAR")) {
+		return Token(T_PASC_VAR_RESERV, result);
+	} else if (!strcmp(result.c_str(), "DIV")) {
+		return Token(T_PASC_INT_DIV_RESERV, result);
+	} else if (!strcmp(result.c_str(), "INTEGER")) {
+		return Token(T_PASC_INTEGER_RESERV, result);
+	} else if (!strcmp(result.c_str(), "REAL")) {
+		return Token(T_PASC_REAL_RESERV, result);
 	}
 
 	//If result is not a reserved keyword, then it's a variable or a mistake :)
@@ -208,18 +238,32 @@ void Lexer::skipWhiteSpace()
 }
 
 /*!
- * fn void Lexer::integer()
- * \brief Return a multidigit integer consumed from the input.
- * \return The integer in string format
+ * fn void Lexer::number()
+ * \brief Return a multidigit integer or float consumed from the input.
+ * \return The number in string format
  */
-std::string Lexer::integer()
+Token Lexer::number()
 {
 	std::string result = "";
 	while (currentChar_ != '\0' && isdigit(currentChar_)) {
 		result += currentChar_;
 		advance();
 	}
-	return result;
+	if (currentChar_ == '.') {
+		result += currentChar_;
+		advance();
+
+		while ( currentChar_ != '\0' &&
+			isdigit(currentChar_)) {
+			result += currentChar_;
+			advance();
+		}
+		
+		return Token(T_REAL, result);
+	} else {
+		return Token(T_INTEGER, result);
+	}
+	return Token();
 }
 
 /*!
@@ -234,6 +278,10 @@ Token Lexer::getNextToken()
 {
 	CLog::write(CLog::DEBUG, "getNextToken (beginning)\n\n");
 	while (currentChar_ != '\0') {
+		if (currentChar_ == '{') {
+			advance();
+			skipComment();
+		}
 		if (isalpha(currentChar_)) {
 			return _id();
 		}
@@ -242,21 +290,28 @@ Token Lexer::getNextToken()
 			advance();
 			return Token(T_PASC_ASSIGN, ":=");
 		}
-	
 		if (currentChar_ == ';') {
 			advance();
-			return Token(T_PASC_SEMI, ";");
+			return Token(T_SEMI, ";");
 		}
 		if (currentChar_ == '.') {
 			advance();
-			return Token(T_PASC_DOT, ".");
+			return Token(T_PASC_DOT_RESERV, ".");
 		}
 		if (isspace(currentChar_)) {
 			skipWhiteSpace();
 			continue;
 		}
 		if (isdigit(currentChar_)) {
-			return Token(T_INTEGER, integer());
+			return number();
+		}
+		if (currentChar_ == ':') {
+			advance();
+			return Token(T_COLON, ":");
+		}
+		if (currentChar_ == ',') {
+			advance();
+			return Token(T_COMMA, ",");
 		}
 		if (currentChar_ == '+') {
 			advance();
@@ -312,7 +367,7 @@ static void start(std::ifstream &file)
 		std::cout << "GLOBAL_SCOPE" << std::endl;
 		nodVis.visitData(result);
 		std::cout << Interpreter::GLOBAL_SCOPE.size() << std::endl;
-		std::map<std::string, int>::iterator it;
+		std::map<std::string, double>::iterator it;
 		for (it = Interpreter::GLOBAL_SCOPE.begin(); it != Interpreter::GLOBAL_SCOPE.end(); it++) {
 			std::cout << it->first ;
 			std::cout << "   " << it->second << std::endl;

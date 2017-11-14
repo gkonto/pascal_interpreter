@@ -1,6 +1,4 @@
 #pragma once
-#ifndef INTERPRETER_HPP
-#define INTERPRETER_HPP
 #include "token.hpp"
 #include "clog.hpp"
 #include <vector>
@@ -14,11 +12,12 @@ class Node
 		// =0 gia abstract mia apo autes i kai polles
 		virtual Node *getRhs() { return NULL; }
 		virtual Node *getLhs() { return NULL; }
-		virtual int  visitData()   { CLog::write(CLog::DEBUG, "virtual visit Should not reach!\n"); return 0; }
+		virtual double  visitData() = 0; //FIXME make it return void !
 		virtual int  value()   { return 1; }
-		virtual void nodeDetails(int indent) {}
+		virtual void nodeDetails(int indent) = 0;
 	private:
 };
+
 
 class TokenNode : public Node
 {
@@ -29,6 +28,36 @@ class TokenNode : public Node
 		Token token_;
 };
 
+
+/**
+ *  A Program class.
+ *  Represents a program and will be out root node
+ */
+class Program : public Node
+{
+	public:
+		Program(std::string name, Node *block) : name_(name), block_(block) {}
+		void nodeDetails(int indent);
+		double visitData();
+	private:
+		std::string name_;
+		Node *block_;
+};
+/**
+ *  A Type class.
+ *  Represents a variable type
+ */
+class Type : public Node
+{
+	public:
+		Type(Token tok) : token_(tok), value_(tok.value()) {}
+		void nodeDetails(int indent);
+		double visitData();
+	private:
+		Token token_;
+		std::string value_;
+};
+
 /**
  *  A Compound class.
  *  Represents a 'BEGIN ... END' block
@@ -37,10 +66,9 @@ class TokenNode : public Node
 class Compound : public Node
 {
 	public:
-		int visitData();
 		void addNode(Node *node); 
 		void nodeDetails(int indent);
-
+		double visitData();
 	private:
 		std::vector<Node *> children_;
 };
@@ -59,10 +87,43 @@ class Var : public TokenNode
 			value_ = op.value();
 		}
 		void nodeDetails(int indent);
-		int visitData();
+		double visitData();
+		std::string getValue() { return value_; }
 	private:
 		std::string value_;
 };
+
+
+/**
+ * Represents a variable declaration. It holds a variable node and a type node.
+ */
+class VarDecl : public Node
+{
+	public:
+		VarDecl(Var *varNode, Type *typeNode) : varNode_(varNode), typeNode_(typeNode) {}
+		void nodeDetails(int indent);
+		double visitData();
+	private:
+		Var  *varNode_;
+		Type *typeNode_;
+};
+
+
+/**
+ *  A Block class.
+ *  Holds the declarations and a compound statement 
+ */
+class Block : public Node
+{
+	public:
+		Block(std::vector<VarDecl *>declarations, Compound *compoundStatement) : declarations_(declarations), compoundStatement_(compoundStatement) {}
+		void nodeDetails(int indent);
+		double visitData();
+	private:
+		std::vector<VarDecl *>declarations_;
+		Compound *compoundStatement_;
+};
+
 
 /**
  * A NodeOp class
@@ -71,7 +132,7 @@ class Var : public TokenNode
 class NoOp : public Node
 {
 	public:
-		int visitData();
+		double visitData();
 		void nodeDetails(int indent);
 	private:
 };
@@ -89,7 +150,7 @@ class Assign : public TokenNode
 		{
 			setToken(op);
 		}
-		int visitData();
+		double visitData();
 		void nodeDetails(int indent);
 	private:
 		TokenNode *lhs_;
@@ -103,7 +164,7 @@ class BinOp : public TokenNode
        		{
 		       	setToken(op);
 		}
-		int visitData();
+		double visitData();
 		void nodeDetails(int indent);
 		Node *getRhs() { return rhs_; }
 		Node *getLhs() { return lhs_; }
@@ -119,7 +180,7 @@ class UnaryOp : public TokenNode
 		{
 			setToken(op);
 		}
-		int visitData();
+		double visitData();
 		void nodeDetails(int indent);
 		Node *getRhs() { return NULL;}
 		Node *getLhs() { return NULL;}
@@ -134,7 +195,7 @@ class Number : public TokenNode
        		{
 			setToken(tok);
 		}
-		int visitData();
+		double visitData() { return value(); }
 		int value() { return atoi(getToken().value().c_str()); }
 		void nodeDetails(int indent);
 	private:
@@ -149,15 +210,19 @@ class Parser
 
 		std::vector<Node *>statementList();
 		Node      *statement();
-		Node      *program();
+		Program   *program();
 		Node      *parse();
 		TokenNode *expr();
 		TokenNode *term();
 		TokenNode *factor();
-		TokenNode *variable();
+		Var       *variable();
 		Compound  *compoundStatement();
 		Assign    *assignmentStatement();
 		NoOp      *empty();
+		Block     *block();
+		Type      *typeSpec();
+		std::vector<VarDecl *> declarations();	
+		std::vector<VarDecl *>variableDeclaration();
 	private:
 		void raiseError();
 		Lexer lexer_;
@@ -183,9 +248,8 @@ class Interpreter : public NodeVisitor
 	public:
 		Interpreter(Parser parser) : parser_(parser) {}
 		Node *interpret();
-		static std::map<std::string, int> GLOBAL_SCOPE;
+		static std::map<std::string, double> GLOBAL_SCOPE;
 	private:
 		Parser parser_;
 };
 
-#endif
