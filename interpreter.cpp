@@ -23,6 +23,7 @@ void Parser::raiseError()
 	assert(true);
 }
 
+
 Node *Parser::parse()
 {
 	CLog::write(CLog::DEBUG, "parse()\n");
@@ -652,4 +653,162 @@ Node* Interpreter::interpret()
 	CLog::write(CLog::DEBUG, "Interpreter::interpret() 2\n");
 	return tree;
 }
+
+/***********************************************/
+
+/***********************************************/
+
+//FIXME που να το βαλω?
+std::map<std::string, Symbol *>SymbolTable::symbols_;
+/***********************************************/
+SymbolTable::SymbolTable()
+{
+	initializeBuiltins();	
+}
+
+/***********************************************/
+
+/***********************************************/
+void SymbolTable::initializeBuiltins()
+{
+	define(new BuiltinTypeSymbol("INTEGER"));
+	define(new BuiltinTypeSymbol("REAL"));
+}
+/***********************************************/
+
+void SymbolTable::representation()
+{
+	CLog::write(CLog::RELEASE, "Symbols: \n");
+	std::map<std::string, Symbol *>::iterator it;
+
+	for ( it = SymbolTable::symbols_.begin(); it != SymbolTable::symbols_.end(); it++) {
+		CLog::write(CLog::RELEASE, "%s\n", it->second->representation());
+	}
+
+}
+/***********************************************/
+
+void SymbolTable::define(Symbol *symbol)
+{
+	typedef std::map<std::string, Symbol *> KVMap;
+
+	CLog::write(CLog::RELEASE, "Define: %s\n", symbol->representation().c_str());
+	SymbolTable::symbols_.insert(KVMap::value_type(symbol->name(), symbol));
+}
+/***********************************************/
+
+Symbol *SymbolTable::lookup(std::string &name)
+{
+	CLog::write(CLog::RELEASE, "Lookup: %s\n", name.c_str());
+	std::map<std::string, Symbol *>::iterator it;
+
+	it = SymbolTable::symbols_.find(name);
+	Symbol *symbol = NULL;
+
+	if (it != SymbolTable::symbols_.end()) {
+		symbol = it->second;
+	}
+	// symbol is either an instance of the Symbol class or 'None'
+	return symbol;
+}
+/***********************************************/
+
+void SymbolTable::visit(Node *node)
+{
+	node->visitSymbolTable();
+}
+
+void Block::visitSymbolTable()
+{
+	typedef std::vector<VarDecl *> VarDeclVec;
+
+	VarDeclVec::iterator it;
+	VarDeclVec declarations = getDeclarations();
+
+	for (it = declarations.begin(); it != declarations.end(); it++) {
+		(*it)->visitSymbolTable();
+	}
+	Compound *comp = getCompound();
+	comp->visitSymbolTable(); //FIXME
+}
+
+void Program::visitSymbolTable()
+{
+	block()->visitSymbolTable();
+}
+
+void BinOp::visitSymbolTable()
+{
+	getLhs()->visitSymbolTable();
+	getRhs()->visitSymbolTable();
+}
+
+void Number::visitSymbolTable()
+{
+	return;
+}
+
+void UnaryOp::visitSymbolTable()
+{
+	getExpr()->visitSymbolTable();
+}
+
+void Compound::visitSymbolTable()
+{
+	std::vector<Node *>::iterator it; 
+	std::vector<Node *> children = getChildren();
+
+	for ( it = children.begin(); it != children.end(); it++) {
+		(*it)->visitSymbolTable();
+	}	
+}
+
+void NoOp::visitSymbolTable()
+{
+	return;
+}
+
+void VarDecl::visitSymbolTable()
+{
+	std::string typeName = getTypeNode()->getValue();
+	Symbol *typeSymbol = SymbolTableBuilder::symtab().lookup(typeName);
+	std::string varName = getVarNode()->getValue();
+	Symbol *varSymbol  = new VarSymbol(varName, typeSymbol);
+	SymbolTableBuilder::symtab().define(varSymbol);
+}
+
+void Assign::visitSymbolTable()
+{
+	std::string varName = getLhs()->getToken().value(); 
+	Symbol *varSymbol = SymbolTable::lookup(varName);
+	if (!varSymbol) {
+		CLog::write(CLog::RELEASE, "Assign Lookup: %s not found\n",varName.c_str());
+	}
+	getRhs()->visitSymbolTable();
+}
+
+void Var::visitSymbolTable()
+{
+	std::string varName = getValue();
+	Symbol *varSymbol = SymbolTable::lookup(varName);
+
+	if (!varSymbol) {
+		CLog::write(CLog::RELEASE, "Assign Lookup: %s not found\n",varName.c_str());
+	}
+}
+
+void SymbolTableBuilder::visit(Node *node)
+{
+	node->visitSymbolTable();
+}
+
+
+
+
+
+
+
+
+
+
 

@@ -360,7 +360,9 @@ static void start(std::ifstream &file)
 		Interpreter interpreter(parser);
 		Node *result = interpreter.interpret();
 
-		// DEBUG
+		SymbolTableBuilder symtab_builder = SymbolTableBuilder();
+	       	symtab_builder.visit(result); 
+// DEBUG
 		NodeVisitor nodVis;
 		nodVis.visitForDetails(result);
 
