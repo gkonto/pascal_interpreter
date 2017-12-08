@@ -128,16 +128,16 @@ class VarDecl : public Node
 class Block : public Node
 {
 	public:
-		Block(std::vector<VarDecl *>declarations, Compound *compoundStatement) : declarations_(declarations), compoundStatement_(compoundStatement) {}
+		Block(std::vector<Node *>declarations, Compound *compoundStatement) : declarations_(declarations), compoundStatement_(compoundStatement) {}
 
 		void nodeDetails(int indent);
 		double visitData();
 		void visitSymbolTable();
 
-		std::vector<VarDecl *>getDeclarations() { return declarations_; }
+		std::vector<Node *>getDeclarations() { return declarations_; }
 		Compound *getCompound() { return compoundStatement_; }
 	private:
-		std::vector<VarDecl *>declarations_;
+		std::vector<Node *>declarations_;
 		Compound *compoundStatement_;
 };
 
@@ -214,6 +214,19 @@ class UnaryOp : public TokenNode
 		Node *expr_;
 };
 
+class ProcedureDecl : public Node
+{
+	public:
+		ProcedureDecl(const std::string &procName, Block *node) : name_(procName), node_(node) {}
+
+		double visitData(); 
+		void nodeDetails(int indent);
+		void visitSymbolTable();
+	private:
+		std::string name_;
+		Block *node_;
+};
+
 class Number : public TokenNode
 {
 	public:
@@ -250,7 +263,7 @@ class Parser
 		NoOp      *empty();
 		Block     *block();
 		Type      *typeSpec();
-		std::vector<VarDecl *> declarations();	
+		std::vector<Node *> declarations();	
 		std::vector<VarDecl *>variableDeclaration();
 	private:
 		void raiseError();

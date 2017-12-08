@@ -204,7 +204,7 @@ void Block::nodeDetails(int indent)
 {
 	std::string ind(indent, ' ');
 	CLog::write(CLog::RELEASE, "%sBlock Node %d variables and a compound Node\n", ind.c_str(), declarations_.size());
-	std::vector<VarDecl *>::iterator it;
+	std::vector<Node *>::iterator it;
 	indent = indent + 5;
 	for (it = declarations_.begin(); it != declarations_.end(); it++)
 	{
@@ -406,7 +406,7 @@ NoOp *Parser::empty()
 Block* Parser::block()
 {
 	CLog::write(CLog::DEBUG, "block: %s\n", currentToken_.representation().c_str()); 
-	std::vector<VarDecl *>declarationNodes = declarations();
+	std::vector<Node *>declarationNodes = declarations();
 	Compound *comp = compoundStatement();
 	Block *node = new Block(declarationNodes, comp);
 
@@ -419,9 +419,10 @@ Block* Parser::block()
  * \brief : declarations : VAR(variableDeclaration SEMI) + | empty
  * \return Block *
  */
-std::vector<VarDecl *> Parser::declarations()
+std::vector<Node *> Parser::declarations()
 {
-	std::vector<VarDecl *> declarations;
+	std::vector<Node *> declarations;
+
 	if (currentToken_.type() == T_PASC_VAR_RESERV) {
 		eat(T_PASC_VAR_RESERV);
 		while (currentToken_.type() == T_PASC_ID) {
@@ -430,6 +431,17 @@ std::vector<VarDecl *> Parser::declarations()
 			declarations.insert(declarations.end(), vd.begin(), vd.end());
 			eat(T_SEMI);
 		}
+	}
+
+	while (currentToken_.type() == T_PASC_PROCEDURE) {
+		eat(T_PASC_PROCEDURE);
+		std::string procName = currentToken_.value();
+		eat(T_PASC_ID);
+		eat(T_SEMI);
+		Block *b_node = block();
+		ProcedureDecl *procDecl = new ProcedureDecl(procName, b_node);
+		declarations.push_back(procDecl);
+		eat(T_SEMI);
 	}
 	
 	return declarations;
@@ -556,7 +568,7 @@ double Program::visitData()
 
 double Block::visitData()
 {
-	std::vector<VarDecl *>::iterator it;
+	std::vector<Node *>::iterator it;
 	for (it = declarations_.begin(); it != declarations_.end(); it++) {
 		(*it)->visitData();
 	}
@@ -720,7 +732,7 @@ void SymbolTable::visit(Node *node)
 
 void Block::visitSymbolTable()
 {
-	typedef std::vector<VarDecl *> VarDeclVec;
+	typedef std::vector<Node *> VarDeclVec;
 
 	VarDeclVec::iterator it;
 	VarDeclVec declarations = getDeclarations();
@@ -795,6 +807,25 @@ void Var::visitSymbolTable()
 	if (!varSymbol) {
 		CLog::write(CLog::RELEASE, "Assign Lookup: %s not found\n",varName.c_str());
 	}
+}
+
+void ProcedureDecl::visitSymbolTable()
+{
+	return;
+}
+
+double ProcedureDecl::visitData()
+{
+	return node_->visitData();
+}
+
+void ProcedureDecl::nodeDetails(int indent)
+{
+	std::string ind(indent, ' ');
+	CLog::write(CLog::RELEASE, "%sProcedure Declaration Node with a block as  child\n", ind.c_str());
+
+	indent = indent + 5;
+	node_->nodeDetails(indent);
 }
 
 void SymbolTableBuilder::visit(Node *node)

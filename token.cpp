@@ -202,6 +202,8 @@ Token Lexer::_getReservedKeyword(const std::string &result)
 		return Token(T_PASC_INTEGER_RESERV, result);
 	} else if (!strcmp(result.c_str(), "REAL")) {
 		return Token(T_PASC_REAL_RESERV, result);
+	} else if (!strcmp(result.c_str(), "PROCEDURE")) {
+		return Token(T_PASC_PROCEDURE, result);
 	}
 
 	//If result is not a reserved keyword, then it's a variable or a mistake :)
