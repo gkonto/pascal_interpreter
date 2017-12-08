@@ -380,23 +380,6 @@ static void start(std::ifstream &file)
 		// todo it should be 
 		// compound-->compound->assign
 		//ask for node details		
-
-
-
-
-	} else {
-		CLog::write(CLog::RELEASE, "> ");
-		while (getline(std::cin, expr)) {
-			if (expr.empty()) {
-				continue;
-			}
-			Lexer lex(expr);
-			Parser parser(lex);
-			Interpreter interpreter(parser);
-			//int result = interpreter.interpret();
-			//CLog::write(CLog::RELEASE, "%d\n", result);
-			CLog::write(CLog::RELEASE, "> ");
-		}
 	}
 }
 
@@ -413,12 +396,12 @@ static int getFileWithRandomExpression(const char *argv, std::ifstream &file)
 static int parseArgs(const int argc, char **argv, std::ifstream &file)
 {
 	for (int i = 0; i < argc; i++) {
-		if (!strcmp(argv[i], "-f")) {
+		//if (!strcmp(argv[i], "-f")) {
 			if (argv[i+1]) {
 				getFileWithRandomExpression(argv[i+1], file);
 				return 1;
 			}
-		}
+		//}
 	}
 	return 0;
 }
