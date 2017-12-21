@@ -4,49 +4,52 @@
 #include <vector>
 #include <map>
 
+/*!
+ * \file interpreter.hpp
+ */
+
+enum SymbolType {
+	INTEGER,
+	REAL,
+	NONE
+};
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**
+ * A Node class.
+ * An abstract class.
+ */
 class Node
 {
 	public:
-		// virtual functions
-		// =0 gia abstract mia apo autes i kai polles
 		virtual Node *getRhs() { return NULL; }
 		virtual Node *getLhs() { return NULL; }
-		virtual double  visitData() = 0; //FIXME make it return void !
-		virtual int  value()   { return 1; }
-		virtual void nodeDetails(int indent) = 0;
-		virtual void visitSymbolTable() {}
+		virtual double  value()   { return 1; }
+
+		virtual void   visitASTPresenter(int ind) = 0;
+		virtual void   visitSemanticAnalyzer()    = 0;
+		virtual double visitEvaluate()            = 0;
 	private:
-};
+}; /* Node */
 
-
+/**********************************************************************/
+/**
+ * A TokenNode class.
+ * Inherits from Node
+ * It's the node that contain a token.
+ */
 class TokenNode : public Node
 {
 	public:
 		Token getToken() { return token_; }
-		void setToken(Token tok) { token_ = tok; }
+		void  setToken(Token tok) { token_ = tok; }
 	private:	
 		Token token_;
-};
+}; /* TokenNode */
 
-
-/**
- *  A Program class.
- *  Represents a program and will be out root node
- */
-class Program : public Node
-{
-	public:
-		Program(std::string name, Node *block) : name_(name), block_(block) {}
-
-		void   nodeDetails(int indent);
-		double visitData();
-		void   visitSymbolTable();
-
-		Node *block() { return block_; };
-	private:
-		std::string name_;
-		Node *block_;
-};
+/**********************************************************************/
 /**
  *  A Type class.
  *  Represents a variable type
@@ -55,14 +58,17 @@ class Type : public Node
 {
 	public:
 		Type(Token tok) : token_(tok), value_(tok.value()) {}
-		void nodeDetails(int indent);
-		double visitData();
 		std::string getValue() { return value_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		Token token_;
 		std::string value_;
-};
+}; /* Type */
 
+/**********************************************************************/
 /**
  *  A Compound class.
  *  Represents a 'BEGIN ... END' block
@@ -71,15 +77,23 @@ class Type : public Node
 class Compound : public Node
 {
 	public:
+		typedef std::vector<Node *>::iterator iterator;
+
 		void addNode(Node *node); 
-		void nodeDetails(int indent);
-		double visitData();
-		void visitSymbolTable();
 		std::vector<Node *> getChildren() { return children_; }
+		size_t size() { return children_.size(); }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
+
+		iterator begin() { return children_.begin(); }
+		iterator end() { return children_.end(); }
 	private:
 		std::vector<Node *> children_;
-};
+}; /* Compound */
 
+/**********************************************************************/
 /**
  * A Var class
  * Represents a Node that is constructed out of a T_PASC_ID token.
@@ -93,34 +107,37 @@ class Var : public TokenNode
 			setToken(op);
 			value_ = op.value();
 		}
-		void nodeDetails(int indent);
-		double visitData();
-		void visitSymbolTable();
+
 		std::string getValue() { return value_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		std::string value_;
-};
+}; /* Var */
 
-
+/**********************************************************************/
 /**
+ * A VarDecl class.
  * Represents a variable declaration. It holds a variable node and a type node.
  */
 class VarDecl : public Node
 {
 	public:
 		VarDecl(Var *varNode, Type *typeNode) : varNode_(varNode), typeNode_(typeNode) {}
-		void nodeDetails(int indent);
-		double visitData();
-		void visitSymbolTable(); 
 		Type *getTypeNode() { return typeNode_; }
 		Var  *getVarNode()  { return varNode_; }
 
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		Var  *varNode_;
 		Type *typeNode_;
-};
+}; /* VarDecl */
 
-
+/**********************************************************************/
 /**
  *  A Block class.
  *  Holds the declarations and a compound statement 
@@ -128,33 +145,62 @@ class VarDecl : public Node
 class Block : public Node
 {
 	public:
+		typedef std::vector<Node *>::iterator iterator;
+
 		Block(std::vector<Node *>declarations, Compound *compoundStatement) : declarations_(declarations), compoundStatement_(compoundStatement) {}
 
-		void nodeDetails(int indent);
-		double visitData();
-		void visitSymbolTable();
+		Block::iterator begin() { return declarations_.begin(); }
+		Block::iterator end()   { return declarations_.end(); }
 
 		std::vector<Node *>getDeclarations() { return declarations_; }
+		size_t size() { return declarations_.size(); }
+		
 		Compound *getCompound() { return compoundStatement_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		std::vector<Node *>declarations_;
 		Compound *compoundStatement_;
-};
+}; /* Block */
 
+/**********************************************************************/
+/**
+ *  A Program class.
+ *  Represents a program and will be out root node
+ */
+class Program : public Node
+{
+	public:
 
+		Program(std::string name, Block *block) : name_(name), block_(block) {}
+		Block *getBlock() { return block_; };
+		std::string getName() { return name_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
+	private:
+		std::string name_;
+		Block *block_;
+}; /* Program */
+
+/**********************************************************************/
 /**
  * A NodeOp class
- * TODO NoOp 
+ * A dummy object
  */
 class NoOp : public Node
 {
 	public:
-		double visitData();
-		void nodeDetails(int indent);
-		void visitSymbolTable();
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
-};
+}; /* NoOp */
 
+/**********************************************************************/
 /**
  * An Assign class
  * Represents an assignment statement.
@@ -168,34 +214,46 @@ class Assign : public TokenNode
 		{
 			setToken(op);
 		}
-		double visitData();
-		void nodeDetails(int indent);
-		void visitSymbolTable();
-
 		TokenNode *getLhs() { return lhs_; }
 		Node *getRhs() { return rhs_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		TokenNode *lhs_;
 		Node *rhs_;
-};
+}; /* Assign */
 
+/**********************************************************************/
+/**
+ * A BinOp class
+ * Represents a node with two children of Node type
+ */
 class BinOp : public TokenNode
 {
 	public:
 		BinOp(Node *lhs, Token &op, Node *rhs) : lhs_(lhs), rhs_(rhs)
-       		{
-		       	setToken(op);
+		{
+			setToken(op);
 		}
-		double visitData();
-		void nodeDetails(int indent);
-		void visitSymbolTable();
 		Node *getRhs() { return rhs_; }
 		Node *getLhs() { return lhs_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		Node *lhs_;
 		Node *rhs_;
+
 };
 
+/**********************************************************************/
+/**
+ * A UnaryOp class
+ * Represents a Unary Node
+ */
 class UnaryOp : public TokenNode
 {
 	public:
@@ -203,30 +261,57 @@ class UnaryOp : public TokenNode
 		{
 			setToken(op);
 		}
-		double visitData();
-		void nodeDetails(int indent);
-		void visitSymbolTable();
 
-		Node *getRhs() { return NULL;}
-		Node *getLhs() { return NULL;}
 		Node *getExpr() { return expr_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		Node *expr_;
-};
+}; /* UnaryOp */
 
+/**********************************************************************/
+class Param : public Node
+{
+	public:
+		Param(Var *var, Type *type) : var_(var), type_(type) {}
+
+		Var *getVar() { return var_; }
+		Type *getType() { return type_; }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
+	private:
+		Var *var_;
+		Type *type_;
+}; /* Param */
+
+/**********************************************************************/
 class ProcedureDecl : public Node
 {
 	public:
-		ProcedureDecl(const std::string &procName, Block *node) : name_(procName), node_(node) {}
+		typedef std::vector<Param *>::iterator iterator;
 
-		double visitData(); 
-		void nodeDetails(int indent);
-		void visitSymbolTable();
+		ProcedureDecl(const std::string &procName, std::vector<Param *>params, Block *block)
+		       	: name_(procName), params_(params), block_(block) {}
+
+		Block *getBlock() { return block_; }
+		std::string getName() { return name_; }
+		iterator begin() { return params_.begin(); }
+		iterator end()   { return params_.end(); }
+
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
 		std::string name_;
-		Block *node_;
-};
+		std::vector<Param *> params_;
+		Block *block_;
+}; /* ProcedureDecl */
 
+/**********************************************************************/
 class Number : public TokenNode
 {
 	public:
@@ -234,15 +319,22 @@ class Number : public TokenNode
        		{
 			setToken(tok);
 		}
-		int value() { return atoi(getToken().value().c_str()); }
 
-		double visitData() { return value(); }
-		void nodeDetails(int indent);
-		void visitSymbolTable();
+		double value() { return atof(getToken().value().c_str()); }
 
+		void visitASTPresenter(int ind);
+		void visitSemanticAnalyzer();
+		double visitEvaluate();
 	private:
-};
+}; /* Number */
 
+
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
 class Parser
 {
 	public:
@@ -265,21 +357,20 @@ class Parser
 		Type      *typeSpec();
 		std::vector<Node *> declarations();	
 		std::vector<VarDecl *>variableDeclaration();
+		std::vector<Param *>formalParameters();
+		std::vector<Param *>formalParameterList();
 	private:
-		void raiseError();
+		void raiseError(const TokenType &tokType);
 		Lexer lexer_;
 		Token currentToken_;
-};
+}; /* Parser */
 
-/*------------------------------------------*/
-
-/*------------------------------------------*/
-enum SymbolType {
-	INTEGER,
-	REAL,
-	NONE
-};
-
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
 class Symbol
 {
 	public:
@@ -291,72 +382,120 @@ class Symbol
 	protected:
 		std::string name_;
 		Symbol *type_;
-};
+}; /* Symbol */
 
-/*------------------------------------------*/
+/**********************************************************************/
 class BuiltinTypeSymbol : public Symbol
 {
 	public:
 		BuiltinTypeSymbol(std::string name) : Symbol(name, NULL) {}
 	private:
-};
+}; /* BuiltinTypeSymbol */
 
-/*------------------------------------------*/
+/**********************************************************************/
 class VarSymbol : public Symbol
 {
 	public:
 		VarSymbol(std::string name, Symbol *type) : Symbol(name, type) {}
 		std::string representation() const { return name_; }
 	private:
-};
+}; /* VarSymbol */
 
-/*------------------------------------------*/
-class SymbolTable
+/**********************************************************************/
+class ProcedureSymbol : public Symbol
 {
 	public:
-		SymbolTable();
+		ProcedureSymbol(std::string name) : Symbol(name, NULL)
+		{}
+		void add(VarSymbol *varSymbol) { params_.push_back(varSymbol); }
+	private:
+		std::vector<VarSymbol *> params_;
+
+
+}; /* ProcedureSymbol */
+
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+class ScopedSymbolTable
+{
+	public:
+		ScopedSymbolTable(std::string name = "global", int level = 1, ScopedSymbolTable *enclosScope = NULL);
+
+		void initBuiltins();
+		void define(Symbol *symbol);
+		Symbol *lookup(const std::string &name);
 
 		void representation();
-		static Symbol *lookup(std::string &name);
-		void define(Symbol *symbol);
+		int getLevel() { return level_; }
 
-		void visit(Node *node);
-
-		static std::map<std::string, Symbol *> symbols_;
+		ScopedSymbolTable *getEnclosingScope() { return enclosingScope_; }
 	private:
-		void initializeBuiltins();
-};
+		std::string name_;
+		int level_;
+		ScopedSymbolTable *enclosingScope_;
+		std::map<std::string, Symbol *> symbols_;
 
-/*------------------------------------------*/
-class NodeVisitor
-{
-	public:
-		NodeVisitor(int ind = 0) : indent_(ind) {}
-		void visitData(Node *node);//FIXME
-		void visitForDetails(Node *node);
-	private:
-		int indent_;
-};
+}; /* ScopedSymbolTable */
 
-/*------------------------------------------*/
-class SymbolTableBuilder : public NodeVisitor
-{
-	public:
-		void visit(Node *node);
-		static SymbolTable symtab() { return symtab_; }
-	private:
-		static SymbolTable symtab_;
-};
-
-/*------------------------------------------*/
-class Interpreter : public NodeVisitor
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+class Interpreter
 {
 	public:
 		Interpreter(Parser parser) : parser_(parser) {}
 		Node *interpret();
-		static std::map<std::string, double> GLOBAL_SCOPE;
 	private:
 		Parser parser_;
+}; /* Interpreter */
+
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+
+			/* Visitors */
+class Evaluator
+{
+	public:
+		double visit(Node *node) { return node->visitEvaluate(); }
+	private:
 };
 
-/*------------------------------------------*/
+/**********************************************************************/
+/**
+ * An ASTPresenter
+ * visit method visits recursively all nodes (root is given as argument)
+ * and prints info about the AST and how it is formatted
+ */
+class ASTPresenter  
+{
+	public:
+		void visit(Node *node) { node->visitASTPresenter(0); }
+	private:
+};
+
+/**********************************************************************/
+class SemanticAnalyzer 
+{
+	public:
+		void visit(Node *node) { node->visitSemanticAnalyzer(); }
+		static ScopedSymbolTable *scope_;
+		static ScopedSymbolTable *currentScope_;
+	private:
+
+};
+
+
+
+
+

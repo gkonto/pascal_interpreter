@@ -3,7 +3,6 @@
 /*!
  *  \file token.hpp
  *  \enum An enum type
- *  The documentation block cannot be put after the enum!
  */
 enum TokenType
 {
@@ -20,20 +19,24 @@ enum TokenType
 	T_COMMA,
 	T_SEMI,         /*!< The Token type_ is SEMI ;     */
 
-	T_PASC_BEGIN_RESERV,   /*!< The Token type_ is BEGIN    */
-	T_PASC_END_RESERV,     /*!< The Token type_ is END     */
-	T_PASC_ASSIGN,         /*!< The Token type_ is ASSIGMENT :=     */
-	T_PASC_DOT_RESERV,     /*!< The Token type_ is DOT  .     */
-	T_PASC_REAL_RESERV,
-	T_PASC_INTEGER_RESERV,
-	T_PASC_INT_DIV_RESERV,
-	T_PASC_VAR_RESERV,
-	T_PASC_PROGRAM_RESERV,
-	T_PASC_ID,
-	T_PASC_PROCEDURE,
+	T_PASC_BEGIN_RESERV,   /*!< The Token type_ is BEGIN             */
+	T_PASC_END_RESERV,     /*!< The Token type_ is END               */
+	T_PASC_ASSIGN,         /*!< The Token type_ is ASSIGMENT :=      */
+	T_PASC_DOT_RESERV,     /*!< The Token type_ is DOT  .            */
+	T_PASC_REAL_RESERV,    /*!< "REAL" reserved keyword in Pascal    */
+	T_PASC_INTEGER_RESERV, /*!< "INTEGER" reserved keyword in Pascal */
+	T_PASC_INT_DIV_RESERV, /*!< "DIV"  reserved keyword in Pascal    */
+	T_PASC_VAR_RESERV,     /*!< "VAR" reserved keyword in Pascal     */
+	T_PASC_PROGRAM_RESERV, /*!< "PROGRAM" reserved keyword in Pascal */
+	T_PASC_ID,             /*!< "ID"  reserved keyword in Pascal     */
+	T_PASC_PROCEDURE,      /*!< "PROCEDURE" reserved keyword         */
 
 	T_MAX
-};
+}; /* TokenType */
+
+/**********************************************************************/
+
+/**********************************************************************/
 
 class Token
 {
@@ -52,19 +55,18 @@ class Token
 		bool isOperatorFirstPrecedence();
 		bool isOperatorSecondPrecedence();
 	private:
-		std::string getTokenTypeLabel();
-		void raiseLabelError();
 
 		TokenType type_;
 		std::string value_;
-};
+}; /* Token */
 
+/**********************************************************************/
 
+/**********************************************************************/
 class Lexer
 {
 	public:
-		Lexer(std::string text) : text_(text), pos_(0), currentChar_(text_[pos_]) {}
-
+		Lexer(std::string prog) : text_(prog), pos_(0), currentChar_(text_[pos_]) {}
 		void advance();
 		void skipWhiteSpace();
 		char peek();
@@ -80,7 +82,10 @@ class Lexer
 		size_t pos_;
 		char currentChar_;
 
-};
+}; /* Lexer */
 
 
+
+std::string getTokenTypeLabel(const TokenType &type);
+void raiseLabelError();
 

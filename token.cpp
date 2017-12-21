@@ -11,32 +11,69 @@
 #include "interpreter.hpp"
 #include "token.hpp"
 
-bool CLog::m_bInitialised = true;
-int CLog::m_nLevel = CLog::RELEASE;
 /*
  *  \file token.cpp
  */
 
+/*********************************************/
+/*********************************************/
+/*********************************************/
+/************ Static variables ***************/
+/*********************************************/
+/*********************************************/
+/*********************************************/
+/**
+ * \var static CLog::m_bInitialised
+ * \brief A variable about visibility of prints
+ */
+bool CLog::m_bInitialised = true;
+
+/**********************************************************************/
+/**
+ * \var static CLog::m_bInitialised
+ * \brief A variable about visibility of prints
+ * If RELEASE, prints marked with DEBUG will not be displayed.
+ * If DEBUG, all prints will be displayed.
+ */
+int CLog::m_nLevel = CLog::RELEASE;
+
+/*********************************************/
+/*********************************************/
+/*********************************************/
+/*********************************************/
+/*********************************************/
+/*********************************************/
+
+
+
+/*********************************************/
+/*********************************************/
+/*********************************************/
+/*           Token Class Methods             */
+/*********************************************/
+/*********************************************/
+/*********************************************/
 /*!
  *  \fn void Token::raiseLabelError()
  *  \brief Raises assertion when getTokenTypeLabel()
  *  is not updated!
  */
-void Token::raiseLabelError()
+void raiseLabelError()
 {
 	std::cout << "getTokenTypeLabel(): Needs update!" << std::endl;
 	assert(false);
-}
+} /* Token::raiseLabelError */
 
+/**********************************************************************/
 /*!
  *  \fn std::string Token::getTokenTypeLabel()
  *  \brief Gets the string label of the enum type
  *  the token is.
  *  \return A label as string
  */
-std::string Token::getTokenTypeLabel()
+std::string getTokenTypeLabel(const TokenType &type)
 {
-	switch(type_)
+	switch(type)
 	{
 		case T_INTEGER: return "T_INTEGER";
 		case T_REAL   : return "T_REAL";
@@ -61,6 +98,7 @@ std::string Token::getTokenTypeLabel()
 		case T_PASC_VAR_RESERV    : return "T_PASC_VAR_RESERV";
 		case T_PASC_PROGRAM_RESERV: return "T_PASC_PROGRAM_RESERV";
 		case T_PASC_ID     	  : return "T_PASC_ID";
+		case T_PASC_PROCEDURE	  : return "T_PASC_PROCEDURE";
 
 		case T_MAX    : return "T_MAX";
 		default:
@@ -68,8 +106,9 @@ std::string Token::getTokenTypeLabel()
 			break;
 	}
 	return "";
-}
+} /* getTokenTypeLabel */
 
+/**********************************************************************/
 /*!
  *  \brief Gives details concerning the value and the type
  *  of a Token.
@@ -78,11 +117,12 @@ std::string Token::getTokenTypeLabel()
 std::string Token::representation()
 {
 	std::ostringstream stringStream;
-	stringStream << "Token(" << getTokenTypeLabel() << ", " << value_ << ")";
+	stringStream << "Token(" << getTokenTypeLabel(type_) << ", " << value_ << ")";
 	std::string msg = stringStream.str();
 	return msg;
-}
+} /* Token::representation */
 
+/**********************************************************************/
 /*!
  *  \brief Checks if Token is operator
  *  \return True if token is operator
@@ -93,8 +133,9 @@ bool Token::isOperator()
 		return true;
 	}
 	return false;
-}
+} /* Token::isOperator */
 
+/**********************************************************************/
 /*!
  *  \brief Checks if Token is operator
  *  \return True if token is operator either '*' or '/'
@@ -111,8 +152,9 @@ bool Token::isOperatorSecondPrecedence()
 			return false;
 	}
 	return false;
-}
+} /* Token::isOperatorSecondPrecedence */
 
+/**********************************************************************/
 /*!
  *  \brief Checks if Token is operator
  *  \return True if token is operator either '+' or '-'
@@ -128,10 +170,27 @@ bool Token::isOperatorFirstPrecedence()
 			return false;
 	}
 	return false;
-}
+} /* Token::isOperatorFirstPrecedence */
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*****************************************************/
+/*****************************************************/
+/*****************************************************/
 /*********************LEXER***************************/
+/*****************************************************/
+/*****************************************************/
+/*****************************************************/
 /*!
  *  \fn void Lexer::raiseError()
  *  \brief Raises assertion when getTokenTypeLabel()
@@ -141,8 +200,9 @@ void Lexer::raiseError()
 {
 	std::cout << "Invalid Syntax!!" << std::endl;
 	assert(false);
-}
+} /* Lexer::raiseError */
 
+/**********************************************************************/
 /*!
  * fn void Lexer::advance()
  * \brief Advance the pos_ pointer and set the currentChar_ variable
@@ -155,8 +215,9 @@ void Lexer::advance()
 	} else {
 		currentChar_ = text_[pos_];
 	}
-}
+} /* Lexer::advance */
 
+/**********************************************************************/
 /*!
  * fn void Lexer::peek()
  * \brief No brief here. TODO !
@@ -171,8 +232,9 @@ char Lexer::peek()
 		CLog::write(CLog::DEBUG, "peek text_[pos] %c\n", text_[peekPos]);
 		return text_[peekPos];
 	}
-}
+} /* Lexer::peek */
 
+/**********************************************************************/
 /*!
  * fn void Lexer::skipComment()
  * \brief Discards all the characters until the closing curly brace is found. 
@@ -183,8 +245,13 @@ void Lexer::skipComment()
 		advance();
 	}
 	advance(); // the closing curly brace
-}
+} /* Lexer::skipComment */
 
+/**********************************************************************/
+/*!
+ * fn void Lexer::_getReservedKeywords()
+ * \brief
+ */
 Token Lexer::_getReservedKeyword(const std::string &result)
 {
 	CLog::write(CLog::DEBUG, "_getReservedKeyword() %s\n", result.c_str());
@@ -208,9 +275,9 @@ Token Lexer::_getReservedKeyword(const std::string &result)
 
 	//If result is not a reserved keyword, then it's a variable or a mistake :)
 	return Token(T_PASC_ID, result); 
-}
+} /* Lexer::_getReservedKeyword */
 
-
+/**********************************************************************/
 /*!
  * fn void Lexer::_id()
  * \brief Handles identifiers and reserved keywords
@@ -227,8 +294,9 @@ Token Lexer::_id()
 	CLog::write(CLog::DEBUG, "_id() --> %s\n", result.c_str());
 	Token tok = _getReservedKeyword(result); 
 	return tok;
-}
+} /* Lexer::_id */
 
+/**********************************************************************/
 /*!
  * fn void Lexer::skipWhiteSpace()
  */
@@ -237,8 +305,9 @@ void Lexer::skipWhiteSpace()
 	while (currentChar_ != '\0' && isspace(currentChar_)) {
 		advance();
 	}
-}
+} /* Lexer::skipWhiteSpace */
 
+/**********************************************************************/
 /*!
  * fn void Lexer::number()
  * \brief Return a multidigit integer or float consumed from the input.
@@ -266,8 +335,9 @@ Token Lexer::number()
 		return Token(T_INTEGER, result);
 	}
 	return Token();
-}
+} /* Lexer::number */
 
+/**********************************************************************/
 /*!
  * fn void Lexer::getNextToken()
  * \brief Lexical analyzer (also known as scanner or tokenizer)
@@ -278,8 +348,9 @@ Token Lexer::number()
  */
 Token Lexer::getNextToken()
 {
-	CLog::write(CLog::DEBUG, "getNextToken (beginning)\n\n");
+	CLog::write(CLog::DEBUG, "Lexer::getNextToken\n\n");
 	while (currentChar_ != '\0') {
+		CLog::write(CLog::DEBUG, "%c\n", currentChar_);
 		if (currentChar_ == '{') {
 			advance();
 			skipComment();
@@ -342,11 +413,24 @@ Token Lexer::getNextToken()
 		CLog::write(CLog::DEBUG, "getNextTOken! should not Readch!");
 		raiseError();
 	}
+	CLog::write(CLog::DEBUG, " getNextToken: Will return EOF!");
 	return Token(T_EOF, "");
-}
+} /* Lexer::getNextToken */
 
-/*********************LEXER***************************/
-/*****************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+/**********************************************************************/
+
+
+
+
+
+
+
+
 
 static void start(std::ifstream &file)
 {
@@ -362,27 +446,14 @@ static void start(std::ifstream &file)
 		Interpreter interpreter(parser);
 		Node *result = interpreter.interpret();
 
-		SymbolTableBuilder symtab_builder = SymbolTableBuilder();
-	       	symtab_builder.visit(result); 
-// DEBUG
-		NodeVisitor nodVis;
-		nodVis.visitForDetails(result);
-
-		std::cout << "GLOBAL_SCOPE" << std::endl;
-		nodVis.visitData(result);
-		std::cout << Interpreter::GLOBAL_SCOPE.size() << std::endl;
-		std::map<std::string, double>::iterator it;
-		for (it = Interpreter::GLOBAL_SCOPE.begin(); it != Interpreter::GLOBAL_SCOPE.end(); it++) {
-			std::cout << it->first ;
-			std::cout << "   " << it->second << std::endl;
-		}
-
-		// todo it should be 
-		// compound-->compound->assign
-		//ask for node details		
+		ASTPresenter pres;
+		pres.visit(result);
 	}
-}
+} /* start */
 
+/**********************************************************************/
+
+/**********************************************************************/
 static int getFileWithRandomExpression(const char *argv, std::ifstream &file)
 {
 	file.open(argv, std::ifstream::in);
@@ -391,8 +462,11 @@ static int getFileWithRandomExpression(const char *argv, std::ifstream &file)
 		return 0;
 	} 
 	return 1;
-}
+} /* getFileWithRandomExpression */
 
+/**********************************************************************/
+
+/**********************************************************************/
 static int parseArgs(const int argc, char **argv, std::ifstream &file)
 {
 	for (int i = 0; i < argc; i++) {
@@ -404,11 +478,18 @@ static int parseArgs(const int argc, char **argv, std::ifstream &file)
 		//}
 	}
 	return 0;
-}
+} /* parseArgs */
 
+/**********************************************************************/
+
+/**********************************************************************/
 int main(int argc, char **argv)
 {
 	std::ifstream file;
 	parseArgs(argc, argv, file);
 	start(file);
-}
+} /* main */
+
+/**********************************************************************/
+
+/**********************************************************************/
