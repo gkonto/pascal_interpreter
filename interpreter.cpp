@@ -720,7 +720,7 @@ void VarDecl::visitSemanticAnalyzer()
 	Symbol *varSymbol = new VarSymbol(varName, typeSymbol);
 
 
-	if (!SemanticAnalyzer::currentScope_->lookup(varName)) {
+	if (!SemanticAnalyzer::currentScope_->lookup(varName, true)) {
 		CLog::write(CLog::RELEASE, "Error: Duplicate identifier %s found", varName);
 	}
 	SemanticAnalyzer::currentScope_->define(varSymbol);
@@ -976,7 +976,7 @@ void ScopedSymbolTable::define(Symbol *symbol)
 } /* ScopedSymbolTable::define */
 
 /***********************************************/
-Symbol *ScopedSymbolTable::lookup(const std::string &name)
+Symbol *ScopedSymbolTable::lookup(const std::string &name, bool currentScopeOnly)
 {
 	CLog::write(CLog::RELEASE, "Lookup: %s\n", name.c_str());
 	std::map<std::string, Symbol *>::iterator it;
@@ -985,6 +985,10 @@ Symbol *ScopedSymbolTable::lookup(const std::string &name)
 
 	if (it != ScopedSymbolTable::symbols_.end()) {
 		return it->second;
+	}
+
+	if (currentScopeOnly) {
+		return NULL;
 	}
 
 	/* recursively go up the chain and lookup the name */

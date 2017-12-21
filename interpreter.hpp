@@ -427,7 +427,7 @@ class ScopedSymbolTable
 
 		void initBuiltins();
 		void define(Symbol *symbol);
-		Symbol *lookup(const std::string &name);
+		Symbol *lookup(const std::string &name, bool currentScopeOnly = false);
 
 		void representation();
 		int getLevel() { return level_; }
