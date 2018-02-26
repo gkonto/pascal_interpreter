@@ -642,7 +642,7 @@ void ProcedureDecl::visitSemanticAnalyzer()
 	ProcedureSymbol *procSymbol = new ProcedureSymbol(procName);
 	SemanticAnalyzer::currentScope_->define(procSymbol);
 
-	CLog::write(CLog::RELEASE, "Enter scope: %s\n", procName);
+	CLog::write(CLog::RELEASE, "Enter scope: %s\n", procName.c_str());
 
 	/* Scope for parameters and local variables */
 	ScopedSymbolTable *procedureScope = new ScopedSymbolTable(procName, SemanticAnalyzer::currentScope_->getLevel() + 1, SemanticAnalyzer::currentScope_);
@@ -662,7 +662,7 @@ void ProcedureDecl::visitSemanticAnalyzer()
 
 	this->getBlock()->visitSemanticAnalyzer();
 	SemanticAnalyzer::currentScope_ = SemanticAnalyzer::currentScope_->getEnclosingScope();
-	CLog::write(CLog::RELEASE, "LEAVE scope: %s\n", procName);
+	CLog::write(CLog::RELEASE, "Leave scope: %s\n", procName.c_str());
 } /* ProcedureDecl::visitSemanticAnalyzer */
 
 /**********************************************************************/
@@ -685,13 +685,13 @@ void Block::visitSemanticAnalyzer()
 /**********************************************************************/
 void Program::visitSemanticAnalyzer()
 {
-	CLog::write(CLog::RELEASE, "Enter scope: global");
+	CLog::write(CLog::RELEASE, "Enter scope: global\n");
 	ScopedSymbolTable *globalScope = new ScopedSymbolTable("global", 1, NULL);
 
 	SemanticAnalyzer::currentScope_ = globalScope;	
 	this->getBlock()->visitSemanticAnalyzer();
 	SemanticAnalyzer::currentScope_ = SemanticAnalyzer::currentScope_->getEnclosingScope();
-	CLog::write(CLog::RELEASE, "LEAVE scope: global");
+	CLog::write(CLog::RELEASE, "LEAVE scope: global\n");
 } /* Program::visitSemanticAnalyzer */
 
 /**********************************************************************/
@@ -720,9 +720,11 @@ void VarDecl::visitSemanticAnalyzer()
 	Symbol *varSymbol = new VarSymbol(varName, typeSymbol);
 
 
-	if (!SemanticAnalyzer::currentScope_->lookup(varName, true)) {
-		CLog::write(CLog::RELEASE, "Error: Duplicate identifier %s found", varName);
+	if (SemanticAnalyzer::currentScope_->lookup(varName, true)) {
+		CLog::write(CLog::RELEASE, "Error: Duplicate identifier %s found\n", varName.c_str());
+		abort();
 	}
+
 	SemanticAnalyzer::currentScope_->define(varSymbol);
 } /* VarDecl::visitSemanticAnalyzer */
 
@@ -732,7 +734,8 @@ void Var::visitSemanticAnalyzer()
 	std::string varName = getValue();
 	Symbol *varSymbol = SemanticAnalyzer::currentScope_->lookup(varName);
 	if (!varSymbol) {
-		CLog::write(CLog::RELEASE, "Error: Symbol %s not found!", varName.c_str());
+		CLog::write(CLog::RELEASE, "Error: Symbol %s not found!\n", varName.c_str());
+		abort();
 	}
 } /* Var::visitSemanticAnalyzer */
 
@@ -972,13 +975,14 @@ void ScopedSymbolTable::define(Symbol *symbol)
 {
 	CLog::write(CLog::RELEASE, "Insert %s\n", symbol->representation().c_str());
 	typedef std::map<std::string, Symbol *>KVMap;
+
 	ScopedSymbolTable::symbols_.insert(KVMap::value_type(symbol->name(), symbol));
 } /* ScopedSymbolTable::define */
 
 /***********************************************/
 Symbol *ScopedSymbolTable::lookup(const std::string &name, bool currentScopeOnly)
 {
-	CLog::write(CLog::RELEASE, "Lookup: %s\n", name.c_str());
+	CLog::write(CLog::RELEASE, "Lookup: %s. (Scope name : %s)\n", name.c_str(), ScopedSymbolTable::name_.c_str());
 	std::map<std::string, Symbol *>::iterator it;
 
 	it = ScopedSymbolTable::symbols_.find(name);

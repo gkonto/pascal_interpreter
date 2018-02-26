@@ -405,8 +405,7 @@ class VarSymbol : public Symbol
 class ProcedureSymbol : public Symbol
 {
 	public:
-		ProcedureSymbol(std::string name) : Symbol(name, NULL)
-		{}
+		ProcedureSymbol(std::string name) : Symbol(name, NULL) {}
 		void add(VarSymbol *varSymbol) { params_.push_back(varSymbol); }
 	private:
 		std::vector<VarSymbol *> params_;

@@ -446,6 +446,9 @@ static void start(std::ifstream &file)
 		Interpreter interpreter(parser);
 		Node *result = interpreter.interpret();
 
+		SemanticAnalyzer seman;
+		seman.visit(result);
+
 		ASTPresenter pres;
 		pres.visit(result);
 	}
